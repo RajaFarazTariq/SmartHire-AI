@@ -1,125 +1,255 @@
 # AI Resume Screening & Recruitment System
 
-A full-stack web application that ingests resumes, extracts structured candidate information using NLP, and ranks candidates against job descriptions with explainable AI-driven match scores.
+An AI-powered recruitment platform that automatically parses resumes, extracts candidate insights using NLP, and ranks applicants against job descriptions with explainable multi-signal scoring.
 
-## Project Overview
-
-This system helps recruiters process high volumes of applicants by automatically extracting skills, scoring candidates, and ranking them on an intuitive dashboard.
-
-**Tech Stack:** Next.js 15 · TypeScript · Gemini · Pinecone · Postgres
-
-## Getting Started
-
-### Installation
-
-```bash
-npm install
-cp .env.example .env.local
-npm run dev
-```
-
-## Implementation Roadmap (10 Phases)
-
-### Phase 1 ✅ — Project Skeleton
-- ✅ Next.js 15 setup with TypeScript & Tailwind
-- ✅ Folder structure & .env.example
-- ⏳ Push to GitHub and deploy to Vercel
-
-### Phase 2 — Authentication (2h)
-- [ ] Clerk auth setup
-- [ ] Sign-in/sign-up pages
-- [ ] Protected dashboard routes
-
-### Phase 3 — Database + ORM (1-2h)
-- [ ] Neon PostgreSQL
-- [ ] Prisma schema & migrations
-- [ ] Prisma client singleton
-
-### Phase 4 — Job CRUD (3h)
-- [ ] Job form & endpoints
-- [ ] Job detail page
-
-### Phase 5 — Resume Upload (3-4h)
-- [ ] Bulk upload with react-dropzone
-- [ ] PDF/DOCX parsing
-- [ ] File storage in Vercel Blob
-
-### Phase 6 — Skill Extraction (4-5h)
-- [ ] Gemini structured extraction
-- [ ] Zod validation
-- [ ] Pinecone embeddings
-
-### Phase 7 — Scoring & Ranking (4h)
-- [ ] Multi-signal composite scoring
-- [ ] AI summaries
-- [ ] Score persistence
-
-### Phase 8 — Recruiter Dashboard (3-4h)
-- [ ] Ranked candidate table
-- [ ] Color-coded scores
-- [ ] Skill badges & summaries
-
-### Phase 9 — Candidate Detail (2-3h)
-- [ ] Full profile display
-- [ ] PDF viewer
-- [ ] Job match history
-
-### Phase 10 — Polish (3-5h)
-- [ ] Empty states & loaders
-- [ ] CSV export
-- [ ] Mobile responsive
-- [ ] Dark mode
-
-## Matching Algorithm
-
-Three weighted signals (weights configurable):
-
-- **Semantic Similarity (40%)** — Cosine similarity of embeddings
-- **Skill Match (40%)** — % of required skills found
-- **Experience Match (20%)** — Years vs. requirement
-
-```
-overallScore = 0.40×semantic + 0.40×skills + 0.20×experience
-```
-
-## Database Schema
-
-Four core tables: User, Job, Candidate, Score (join table)
-
-See `prisma/schema.prisma` for the full schema.
-
-## Environment Variables
-
-```bash
-GOOGLE_API_KEY=...
-PINECONE_API_KEY=...
-PINECONE_INDEX=resume-screening
-DATABASE_URL=postgresql://...
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
-CLERK_SECRET_KEY=...
-BLOB_READ_WRITE_TOKEN=...
-```
-
-**Never commit `.env.local`** — it's in `.gitignore`
-
-## Free-Tier Capacity
-
-- ~50 docs/user (Pinecone)
-- ~1500 queries/day (Gemini)
-- 3-5 concurrent users
-- 500 MB database (Neon)
-- 100 GB bandwidth (Vercel)
-
-**Total cost: $0**
-
-## Resources
-
-- [Next.js](https://nextjs.org/docs)
-- [Clerk](https://clerk.com)
-- [Prisma](https://www.prisma.io)
-- [Gemini API](https://ai.google.dev)
-- [Pinecone](https://www.pinecone.io)
+Built with modern full-stack technologies including Next.js 15, TypeScript, Gemini AI, Pinecone, PostgreSQL, and Tailwind CSS.
 
 ---
 
-Built as a portfolio project demonstrating AI/ML + full-stack capabilities.
+## 🚀 Features
+
+* AI-powered resume parsing (PDF/DOCX)
+* NLP-based skill & entity extraction
+* Semantic candidate-job matching
+* Multi-signal ranking algorithm
+* Recruiter dashboard with analytics
+* Bulk resume upload system
+* Explainable AI-generated summaries
+* Responsive modern UI with dark mode
+* Secure authentication & protected routes
+* Real-time candidate scoring and filtering
+
+---
+
+## 🧠 AI Matching Engine
+
+The ranking system combines three weighted scoring signals:
+
+| Signal              | Weight | Purpose                                             |
+| ------------------- | ------ | --------------------------------------------------- |
+| Semantic Similarity | 40%    | Measures contextual similarity using embeddings     |
+| Skill Match         | 40%    | Matches required job skills                         |
+| Experience Match    | 20%    | Compares candidate experience with job requirements |
+
+```ts
+overallScore =
+  0.40 * semanticScore +
+  0.40 * skillMatchScore +
+  0.20 * experienceScore
+```
+
+This hybrid approach improves ranking accuracy while keeping results explainable for recruiters.
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend
+
+* Next.js 15
+* TypeScript
+* Tailwind CSS v4
+* shadcn/ui
+* React Hook Form
+* Zod
+* TanStack Query
+* Recharts
+
+### Backend & AI
+
+* Gemini AI
+* LangChain
+* Pinecone Vector Database
+* Prisma ORM
+* PostgreSQL (Neon)
+
+### Authentication & Storage
+
+* Clerk Authentication
+* Vercel Blob Storage
+
+---
+
+## 📂 Project Structure
+
+```bash
+src/
+ ├── app/
+ ├── components/
+ ├── lib/
+ ├── types/
+ ├── api/
+ └── prisma/
+```
+
+The project follows a clean, scalable, and production-ready architecture.
+
+---
+
+## ⚡ Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/your-username/ai-resume-screening-system.git
+cd ai-resume-screening-system
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Configure Environment Variables
+
+```bash
+cp .env.example .env.local
+```
+
+Add the required API keys:
+
+```env
+GOOGLE_API_KEY=
+PINECONE_API_KEY=
+PINECONE_INDEX=
+DATABASE_URL=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+BLOB_READ_WRITE_TOKEN=
+```
+
+### 4. Start Development Server
+
+```bash
+npm run dev
+```
+
+---
+
+## 📌 Development Roadmap
+
+### ✅ Phase 1 — Project Setup
+
+* Next.js 15 + TypeScript setup
+* Tailwind CSS configuration
+* Project structure initialization
+
+### 🔐 Phase 2 — Authentication
+
+* Clerk authentication
+* Protected routes
+* User sessions
+
+### 🗄 Phase 3 — Database & ORM
+
+* PostgreSQL setup
+* Prisma schema & migrations
+
+### 📄 Phase 4 — Job Management
+
+* Job CRUD operations
+* Job detail pages
+
+### 📤 Phase 5 — Resume Upload
+
+* Bulk file upload
+* PDF/DOCX parsing
+* Blob storage integration
+
+### 🤖 Phase 6 — AI Extraction
+
+* Structured resume parsing
+* Skill extraction
+* Embedding generation
+
+### 📊 Phase 7 — Candidate Ranking
+
+* Semantic similarity scoring
+* Composite AI ranking
+* AI-generated recruiter summaries
+
+### 📈 Phase 8 — Recruiter Dashboard
+
+* Ranked candidate tables
+* Filtering & analytics
+* Skill-gap visualization
+
+### 👤 Phase 9 — Candidate Profiles
+
+* Resume viewer
+* Match history
+* Candidate details
+
+### ✨ Phase 10 — Production Polish
+
+* Mobile responsiveness
+* Dark mode
+* CSV export
+* Performance optimization
+
+---
+
+## 🔒 Security & Privacy
+
+* Environment variables protected via `.env.local`
+* Secure authentication using Clerk
+* Scoped recruiter-based data access
+* Resume file isolation and protected storage
+
+⚠️ Never commit secrets or API keys to GitHub.
+
+---
+
+## 📊 Free-Tier Friendly
+
+This project is designed to run entirely on free-tier services:
+
+* Gemini API
+* Pinecone
+* Neon PostgreSQL
+* Vercel Hosting
+* Clerk Authentication
+
+Estimated monthly cost: **$0**
+
+---
+
+## 🎯 Why This Project Matters
+
+This project demonstrates:
+
+* AI/ML integration in real-world workflows
+* NLP & semantic search
+* Vector databases & embeddings
+* Full-stack architecture
+* Modern recruiter-focused UX
+* Explainable AI systems
+
+It is designed as a production-grade portfolio project for AI Engineering, Data Science, Full-Stack Development, and ML roles.
+
+---
+
+## 📚 Resources
+
+* Next.js
+* Prisma
+* Pinecone
+* Gemini API
+* Clerk
+* LangChain
+
+---
+
+## ⭐ Future Improvements
+
+* ATS integrations
+* Bias detection tools
+* Multi-language resume support
+* AI interview analysis
+* Candidate outreach automation
+* Advanced recruiter analytics
+
+---
+
+Built with ❤️ using AI + Full-Stack Engineering.

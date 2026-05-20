@@ -1,7 +1,45 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(npm run build 2>&1)"
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(npm ls @clerk/nextjs 2>&1)",
+      "PowerShell(npm run dev 2>&1)",
+      "PowerShell(\"--- /jobs \\(no auth\\):\"; curl.exe -sS -o nul -w \"STATUS=%{http_code} REDIRECT_URL=%{redirect_url} SIZE=%{size_download}`n\" http://localhost:3000/jobs; \"--- /jobs with -L \\(follow\\):\"; curl.exe -sS -L -o \"$env:TEMP\\\\smart_jobs.html\" -w \"FINAL_STATUS=%{http_code} FINAL_URL=%{url_effective} NUM_REDIRECTS=%{num_redirects}`n\" http://localhost:3000/jobs; \"--- markers after following redirect:\"; Select-String -Path \"$env:TEMP\\\\smart_jobs.html\" -Pattern '<title>|cl-signIn|cl-component|sign-in|SignIn|Coming soon' -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 10)",
+      "PowerShell(\"--- /sign-in: 404 occurrences in context:\"; Select-String -Path \"$env:TEMP\\\\smart_signin.html\" -Pattern '.{40}404.{40}' -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 3; \"--- /sign-in: body content \\(after main tag\\):\"; $sin = Get-Content \"$env:TEMP\\\\smart_signin.html\" -Raw; $bodyStart = $sin.IndexOf\\('<body'\\); if\\($bodyStart -gt 0\\) { $sin.Substring\\($bodyStart, [Math]::Min\\(1200, $sin.Length - $bodyStart\\)\\) })",
+      "PowerShell(\"--- /sign-up body shell:\"; $sup = Get-Content \"$env:TEMP\\\\smart_signup.html\" -Raw; $bodyStart = $sup.IndexOf\\('<body'\\); if\\($bodyStart -gt 0\\) { $sup.Substring\\($bodyStart, 600\\) }; \"`n--- /sign-up: SignUp chunk reference:\"; Select-String -Path \"$env:TEMP\\\\smart_signup.html\" -Pattern '\"SignUp\"|sign-up/%5B%5B\\\\.\\\\.\\\\.sign-up%5D%5D' -AllMatches | ForEach-Object { $_.Matches.Value } | Select-Object -First 4)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/candidates)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/upload)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/api/jobs)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/jobs/new)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/sign-in/factor-one)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/this-route-does-not-exist)",
+      "PowerShell(\"--- /candidates \\(protected, unauth\\):\")",
+      "PowerShell(\"--- /upload \\(protected, unauth\\):\")",
+      "PowerShell(\"--- /api/jobs \\(protected api, unauth\\):\")",
+      "PowerShell(\"--- /jobs/new \\(protected, unauth\\):\")",
+      "PowerShell(\"--- /sign-in \\(catch-all sub-route\\):\")",
+      "PowerShell(\"--- /nonexistent \\(sanity check\\):\")",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code} REDIRECT_URL=%{redirect_url}`n\" http://localhost:3000/jobs)",
+      "PowerShell(curl.exe -sS -L -o nul -w \"FINAL_STATUS=%{http_code} FINAL_URL=%{url_effective} NUM_REDIRECTS=%{num_redirects}`n\" http://localhost:3000/jobs)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code} REDIRECT_URL=%{redirect_url}`n\" http://localhost:3000/candidates)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code} REDIRECT_URL=%{redirect_url}`n\" http://localhost:3000/upload)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code} REDIRECT_URL=%{redirect_url}`n\" http://localhost:3000/api/jobs)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code} REDIRECT_URL=%{redirect_url}`n\" http://localhost:3000/this-route-does-not-exist)",
+      "PowerShell(curl.exe -sS -o nul -w \"STATUS=%{http_code}`n\" http://localhost:3000/)",
+      "PowerShell(\"--- /jobs after middleware fix:\")",
+      "PowerShell(\"--- /jobs follow-redirects:\")",
+      "PowerShell(\"--- /candidates:\")",
+      "PowerShell(\"--- /upload:\")",
+      "PowerShell(\"--- /api/jobs:\")",
+      "PowerShell(\"--- /nonexistent \\(should still 404\\):\")",
+      "PowerShell(\"--- / \\(public, unaffected\\):\")",
+      "PowerShell(npx prisma generate 2>&1)",
+      "PowerShell(npx prisma migrate dev --name init 2>&1)",
+      "PowerShell(npm install -D dotenv-cli 2>&1)",
+      "PowerShell(npm run db:migrate -- --name init 2>&1)",
+      "PowerShell(npx dotenv -e .env.local -- node scripts/dbcheck.cjs 2>&1)",
+      "PowerShell(npm install @vercel/blob 2>&1)",
+      "PowerShell(npm install 2>&1)"
     ]
   }
 }
