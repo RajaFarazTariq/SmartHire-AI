@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id // matches Clerk userId
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  jobs       Job[]
+  candidates Candidate[]
+
+  @@map("users")
+}
+
+model Job {
+  id              String   @id @default(cuid())
+  userId          String
+  title           String // e.g. "Senior Backend Engineer"
+  company         String?
+  description     String   @db.Text
+  requiredSkills  String[] // ["Python", "PostgreSQL"]
+  preferredSkills String[] // nice-to-haves
+  minExperience   Int? // years
+  pineconeId      String?
+  createdAt       DateTime @default(now())
+
+  user   User     @relation(fields: [userId], references: [id])
+  scores Score[]
+
+  @@index([userId])
+  @@map("jobs")
+}
+
+model Candidate {
+  id                String   @id @default(cuid())
+  userId            String // recruiter who uploaded
+  fullName          String?
+  email             String?
+  phone             String?
+  filename          String
+  fileUrl           String // Vercel Blob URL
+  fileType          String // "pdf" | "docx"
+  rawText           String   @db.Text // extracted plain text
+  extractedSkills   String[]
+  yearsExperience   Int?
+  educationLevel    String?
+  currentTitle      String?
+  pineconeId        String?
+  status            String   @default("processing")
+  uploadedAt        DateTime @default(now())
+
+  user   User     @relation(fields: [userId], references: [id])
+  scores Score[]
+
+  @@index([userId])
+  @@map("candidates")
+}
+
+model Score {
+  id              String   @id @default(cuid())
+  jobId           String
+  candidateId     String
+  semanticScore   Float // 0-100, cosine similarity
+  skillMatchScore Float // 0-100, % required matched
+  experienceScore Float // 0-100, based on years
+  overallScore    Float // 0-100, weighted composite
+  matchedSkills   String[]
+  missingSkills   String[]
+  aiSummary       String?  @db.Text
+  computedAt      DateTime @default(now())
+
+  job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, candidateId])
+  @@index([jobId])
+  @@index([candidateId])
+  @@map("scores")
+}
