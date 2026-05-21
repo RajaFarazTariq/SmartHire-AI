@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getJob } from "../actions";
+import { ArrowLeft, Briefcase, Calendar, GraduationCap, Download } from "lucide-react";
+
+import { getJob, getJobScores } from "../actions";
+import { JobDetailActions } from "../job-detail-actions";
+import { ScoreButton } from "../score-button";
+import { CandidateRanking } from "../candidate-ranking";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function JobDetailPage({
   params,
@@ -14,80 +22,122 @@ export default async function JobDetailPage({
     notFound();
   }
 
+  const scores = await getJobScores(id);
+
   return (
-    <div className="max-w-3xl">
-      <div className="mb-6">
-        <Link href="/jobs" className="text-sm text-blue-600 hover:underline">
-          ← Back to jobs
-        </Link>
+    <div className="mx-auto max-w-3xl">
+      <Link
+        href="/jobs"
+        className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" /> Back to jobs
+      </Link>
+
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Briefcase className="size-6" />
+          </span>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{job.title}</h1>
+            {job.company && (
+              <p className="text-muted-foreground">{job.company}</p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Calendar className="size-3.5" />
+                {job.createdAt.toLocaleDateString()}
+              </span>
+              {job.minExperience != null && (
+                <span className="flex items-center gap-1">
+                  <GraduationCap className="size-3.5" />
+                  {job.minExperience}+ years experience
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <JobDetailActions jobId={job.id} jobTitle={job.title} />
       </div>
 
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">{job.title}</h1>
-        {job.company && (
-          <p className="mt-1 text-gray-600">{job.company}</p>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-h-96 overflow-y-auto pr-1">
+              <p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
+                {job.description}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Required skills</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {job.requiredSkills.map((s) => (
+              <Badge key={s}>{s}</Badge>
+            ))}
+          </CardContent>
+        </Card>
+
+        {job.preferredSkills.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Preferred skills</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {job.preferredSkills.map((s) => (
+                <Badge key={s} variant="secondary">
+                  {s}
+                </Badge>
+              ))}
+            </CardContent>
+          </Card>
         )}
-        <p className="mt-2 text-xs text-gray-500">
-          Created {job.createdAt.toLocaleString()}
-        </p>
-      </header>
+      </div>
 
-      <section className="mb-6">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Description
-        </h2>
-        <p className="whitespace-pre-wrap text-gray-800">{job.description}</p>
+      <section className="mt-10">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Candidate ranking</h2>
+            <p className="text-sm text-muted-foreground">
+              {scores.length > 0
+                ? `${scores.length} candidate${scores.length === 1 ? "" : "s"} scored against this job`
+                : "Score your ready candidates against this job's requirements"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {scores.length > 0 && (
+              <Button asChild variant="outline" size="sm">
+                <a href={`/api/jobs/${job.id}/export`}>
+                  <Download className="size-4" /> Export CSV
+                </a>
+              </Button>
+            )}
+            <ScoreButton jobId={job.id} hasScores={scores.length > 0} />
+          </div>
+        </div>
+
+        {scores.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
+              <p className="text-sm text-muted-foreground">
+                No candidates scored yet.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Click “Score candidates” to rank your uploaded resumes by fit.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <CandidateRanking scores={scores} />
+        )}
       </section>
-
-      <section className="mb-6">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-          Required skills
-        </h2>
-        <SkillBadges skills={job.requiredSkills} tone="required" />
-      </section>
-
-      {job.preferredSkills.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Preferred skills
-          </h2>
-          <SkillBadges skills={job.preferredSkills} tone="preferred" />
-        </section>
-      )}
-
-      {job.minExperience != null && (
-        <section className="mb-6">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
-            Minimum experience
-          </h2>
-          <p className="text-gray-800">{job.minExperience} years</p>
-        </section>
-      )}
-    </div>
-  );
-}
-
-function SkillBadges({
-  skills,
-  tone,
-}: {
-  skills: string[];
-  tone: "required" | "preferred";
-}) {
-  const cls =
-    tone === "required"
-      ? "bg-blue-50 text-blue-700 ring-blue-200"
-      : "bg-gray-50 text-gray-700 ring-gray-200";
-  return (
-    <div className="flex flex-wrap gap-2">
-      {skills.map((s) => (
-        <span
-          key={s}
-          className={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${cls}`}
-        >
-          {s}
-        </span>
-      ))}
     </div>
   );
 }

@@ -3,11 +3,22 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useRouter } from "next/navigation";
+import {
+  UploadCloud,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { cn } from "@/lib/utils";
 import { uploadResumeAction, type UploadResumeResult } from "./actions";
+import { Card, CardContent } from "@/components/ui/card";
 
 type FileStatus = {
   filename: string;
-  state: "pending" | "uploading" | "done" | "error";
+  state: "uploading" | "done" | "error";
   message?: string;
   candidateId?: string;
 };
@@ -20,12 +31,13 @@ export default function Dropzone() {
     async (accepted: File[]) => {
       if (accepted.length === 0) return;
 
-      const initial: FileStatus[] = accepted.map((f) => ({
-        filename: f.name,
-        state: "uploading",
-      }));
       const startIndex = statuses.length;
-      setStatuses((prev) => [...prev, ...initial]);
+      setStatuses((prev) => [
+        ...prev,
+        ...accepted.map(
+          (f): FileStatus => ({ filename: f.name, state: "uploading" }),
+        ),
+      ]);
 
       await Promise.all(
         accepted.map(async (file, i) => {
@@ -56,6 +68,11 @@ export default function Dropzone() {
                 };
             return next;
           });
+          if (result.ok) {
+            toast.success(`Uploaded ${result.filename}`);
+          } else {
+            toast.error(`${result.filename}: ${result.error}`);
+          }
         }),
       );
 
@@ -74,67 +91,81 @@ export default function Dropzone() {
   });
 
   return (
-    <div>
+    <div className="space-y-6">
       <div
         {...getRootProps()}
-        className={`cursor-pointer rounded-lg border-2 border-dashed p-12 text-center transition-colors ${
+        className={cn(
+          "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center transition-colors",
           isDragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50 hover:border-gray-400"
-        }`}
+            ? "border-primary bg-primary/5"
+            : "border-border bg-muted/30 hover:border-primary/50 hover:bg-muted/50",
+        )}
       >
         <input {...getInputProps()} />
+        <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <UploadCloud className="size-7" />
+        </span>
         {isDragActive ? (
-          <p className="text-gray-700">Drop the resumes here…</p>
+          <p className="font-medium">Drop the resumes here…</p>
         ) : (
           <>
-            <p className="font-medium text-gray-700">
-              Drag and drop resumes here, or click to browse
+            <p className="font-medium">
+              Drag &amp; drop resumes, or click to browse
             </p>
-            <p className="mt-1 text-sm text-gray-500">
-              PDF or DOCX, up to 4 MB each
+            <p className="mt-1 text-sm text-muted-foreground">
+              PDF or DOCX · up to 4 MB each · multiple files supported
             </p>
           </>
         )}
       </div>
 
       {statuses.length > 0 && (
-        <ul className="mt-6 divide-y divide-gray-200 rounded-md border border-gray-200">
-          {statuses.map((s, i) => (
-            <li
-              key={`${s.filename}-${i}`}
-              className="flex items-center justify-between px-4 py-2 text-sm"
-            >
-              <span className="truncate text-gray-800">{s.filename}</span>
-              <StateBadge status={s} />
-            </li>
-          ))}
-        </ul>
+        <Card>
+          <CardContent className="divide-y p-0">
+            {statuses.map((s, i) => (
+              <div
+                key={`${s.filename}-${i}`}
+                className="flex items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <FileText className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate text-sm">{s.filename}</span>
+                </div>
+                <StatusIndicator status={s} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
     </div>
   );
 }
 
-function StateBadge({ status }: { status: FileStatus }) {
+function StatusIndicator({ status }: { status: FileStatus }) {
   if (status.state === "uploading") {
-    return <span className="text-xs text-gray-500">Uploading…</span>;
+    return (
+      <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 className="size-3.5 animate-spin" /> Processing…
+      </span>
+    );
   }
   if (status.state === "done") {
     return (
       <a
         href={`/candidates/${status.candidateId}`}
-        className="text-xs font-medium text-blue-600 hover:underline"
+        className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-emerald-600 hover:underline"
       >
-        View →
+        <CheckCircle2 className="size-3.5" /> View
       </a>
     );
   }
-  if (status.state === "error") {
-    return (
-      <span className="max-w-xs truncate text-xs text-red-600" title={status.message}>
-        {status.message ?? "Failed"}
-      </span>
-    );
-  }
-  return <span className="text-xs text-gray-400">Pending</span>;
+  return (
+    <span
+      className="flex max-w-[12rem] shrink-0 items-center gap-1.5 truncate text-xs text-destructive"
+      title={status.message}
+    >
+      <AlertCircle className="size-3.5 shrink-0" />
+      <span className="truncate">{status.message ?? "Failed"}</span>
+    </span>
+  );
 }

@@ -39,7 +39,26 @@
       "PowerShell(npm run db:migrate -- --name init 2>&1)",
       "PowerShell(npx dotenv -e .env.local -- node scripts/dbcheck.cjs 2>&1)",
       "PowerShell(npm install @vercel/blob 2>&1)",
-      "PowerShell(npm install 2>&1)"
+      "PowerShell(npm install 2>&1)",
+      "PowerShell(npm install class-variance-authority clsx tailwind-merge tw-animate-css motion @radix-ui/react-slot @radix-ui/react-dropdown-menu @radix-ui/react-dialog @radix-ui/react-label @radix-ui/react-avatar @radix-ui/react-separator @radix-ui/react-select @radix-ui/react-tooltip sonner 2>&1)",
+      "PowerShell($conns = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { $conns.OwningProcess | Sort-Object -Unique | ForEach-Object { $p = Get-Process -Id $_ -ErrorAction SilentlyContinue; \"Killing PID $_ \\($\\($p.ProcessName\\)\\)\"; Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } else { \"Nothing on port 3000\" })",
+      "PowerShell(npm run db:migrate -- --name add_username 2>&1)",
+      "PowerShell(npm run db:migrate -- --name add_username --create-only 2>&1)",
+      "PowerShell(npx dotenv -e .env.local -- prisma migrate deploy 2>&1)",
+      "PowerShell(npm run db:generate 2>&1)",
+      "PowerShell(npm run db:migrate -- --name add_user_fullname 2>&1)",
+      "PowerShell(npm install @radix-ui/react-alert-dialog 2>&1)",
+      "PowerShell(npx dotenv -e .env.local -- node scripts/ai-smoke.cjs 2>&1)",
+      "PowerShell(npm install next-themes 2>&1)",
+      "PowerShell(npm ls react react-dom 2>&1)",
+      "Bash(node -e \"const r=require\\('c:/Projects/SmartHire-AI/node_modules/react/package.json'\\); console.log\\('react', r.version\\); const React=require\\('c:/Projects/SmartHire-AI/node_modules/react'\\); console.log\\('has useActionState:', typeof React.useActionState\\); const rd=require\\('c:/Projects/SmartHire-AI/node_modules/react-dom'\\); console.log\\('react-dom', require\\('c:/Projects/SmartHire-AI/node_modules/react-dom/package.json'\\).version\\); console.log\\('has useFormState:', typeof rd.useFormState\\);\")",
+      "PowerShell(npm install react@^19 react-dom@^19 2>&1)",
+      "PowerShell(npm install -D \"@types/react@^19\" \"@types/react-dom@^19\" 2>&1)",
+      "PowerShell(node -e \"console.log\\('react', require\\('c:/Projects/SmartHire-AI/node_modules/react/package.json'\\).version\\); console.log\\('react-dom', require\\('c:/Projects/SmartHire-AI/node_modules/react-dom/package.json'\\).version\\); console.log\\('useActionState:', typeof require\\('c:/Projects/SmartHire-AI/node_modules/react'\\).useActionState\\)\")",
+      "PowerShell(npm run db:migrate -- --name enterprise_pipeline_activity 2>&1)",
+      "PowerShell(node -e \"console.log\\('recharts', require\\('c:/Projects/SmartHire-AI/node_modules/recharts/package.json'\\).version\\)\")",
+      "PowerShell(npm install recharts@^2.15 2>&1)",
+      "PowerShell(npm run db:migrate -- --name add_notes 2>&1)"
     ]
   }
 }

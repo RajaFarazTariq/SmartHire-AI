@@ -4,6 +4,8 @@ import { put } from "@vercel/blob";
 import { requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { detectFileType, extractResumeText } from "@/lib/parsers";
+import { processCandidate } from "@/lib/extraction";
+import { logActivity } from "@/lib/activity";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 MB — under Vercel serverless body limit
 
@@ -52,7 +54,7 @@ export async function uploadResumeAction(
   }
 
   const blob = await put(`resumes/${user.id}/${file.name}`, buffer, {
-    access: "public",
+    access: "private",
     addRandomSuffix: true,
     contentType: file.type || (fileType === "pdf" ? "application/pdf" : undefined),
   });
@@ -68,6 +70,20 @@ export async function uploadResumeAction(
       status: "processing",
     },
   });
+
+  await logActivity(
+    user.id,
+    "candidate.uploaded",
+    `Uploaded resume "${file.name}"`,
+  );
+
+  // Run AI extraction inline; if it fails the candidate stays "processing"
+  // and can be retried from the candidate detail page.
+  try {
+    await processCandidate(candidate.id);
+  } catch (err) {
+    console.error(`AI extraction failed for ${candidate.id}:`, err);
+  }
 
   return { ok: true, candidateId: candidate.id, filename: file.name };
 }
