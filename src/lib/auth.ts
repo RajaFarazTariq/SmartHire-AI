@@ -13,10 +13,18 @@ export async function getOrCreateDbUser() {
     throw new Error("Clerk user has no primary email address");
   }
 
+  const fullName =
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || null;
+
   return prisma.user.upsert({
     where: { id: clerkUser.id },
-    update: { email: primaryEmail },
-    create: { id: clerkUser.id, email: primaryEmail },
+    update: { email: primaryEmail, username: clerkUser.username, fullName },
+    create: {
+      id: clerkUser.id,
+      email: primaryEmail,
+      username: clerkUser.username,
+      fullName,
+    },
   });
 }
 

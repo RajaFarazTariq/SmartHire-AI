@@ -24,8 +24,7 @@ Rules:
 Resume:
 {resumeText}`;
 
-export const SUMMARY_PROMPT = `Analyze this candidate's fit for the role.
-Write a concise 2-3 sentence summary suitable for a recruiter dashboard.
+export const SUMMARY_PROMPT = `You are a recruiting assistant. Assess this candidate's fit for the role.
 
 Job: {jobTitle}
 Required skills: {requiredSkills}
@@ -35,10 +34,19 @@ Candidate: {candidateName}
 Current title: {currentTitle}
 Years of experience: {yearsExperience}
 Skills: {candidateSkills}
-
 Matched skills: {matchedSkills}
 Missing required skills: {missingSkills}
 
-Write a balanced assessment. Mention strengths first, then specific gaps. 
-Avoid generic phrases like "strong candidate" - be concrete about what aligns and what doesn't. 
-Do not invent information not provided above.`;
+Return ONLY valid JSON (no markdown, no asterisks, no commentary) matching this schema:
+{
+  "overview": string,
+  "strengths": string[],
+  "gaps": string[]
+}
+
+Guidelines:
+- "overview": one balanced sentence summarizing overall fit.
+- "strengths": 2-4 concrete, specific strengths (short phrases). Reference real skills/experience.
+- "gaps": 0-3 concrete gaps or missing requirements; use [] if there are none.
+- Be specific and concrete; avoid generic phrases like "strong candidate".
+- Do not invent information not provided above.`;

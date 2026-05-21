@@ -1,4 +1,5 @@
 import { requireDbUser } from "@/lib/auth";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default async function DashboardLayout({
   children,
@@ -8,14 +9,12 @@ export default async function DashboardLayout({
   const user = await requireDbUser();
 
   return (
-    <div className="flex">
-      <aside className="w-64 bg-gray-100 p-4">
-        <nav>
-          <p className="text-sm text-gray-600">Signed in as</p>
-          <p className="font-medium truncate">{user.email}</p>
-        </nav>
-      </aside>
-      <main className="flex-1 p-6">{children}</main>
-    </div>
+    <DashboardShell
+      email={user.email}
+      username={user.username}
+      fullName={user.fullName}
+    >
+      {children}
+    </DashboardShell>
   );
 }

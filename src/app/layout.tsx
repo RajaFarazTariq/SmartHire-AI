@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "@/components/theme-provider";
+import { clerkAppearance } from "@/lib/clerk-appearance";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "AI Resume Screening System",
-  description: "AI-powered recruitment screening and candidate ranking",
+  title: "SmartHire AI — Intelligent Resume Screening",
+  description:
+    "AI-powered recruitment platform that extracts skills, scores candidates, and ranks them against your job descriptions with explainable match scores.",
 };
 
 export default function RootLayout({
@@ -16,10 +20,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className="h-full">
-        <body className={`${inter.className} min-h-full flex flex-col`}>
-          {children}
+    <ClerkProvider appearance={clerkAppearance}>
+      <html lang="en" className="h-full" suppressHydrationWarning>
+        <body className={`${inter.variable} min-h-full font-sans antialiased`}>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
