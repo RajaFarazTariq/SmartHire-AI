@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 
 import { Brand } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { AssistantCharacter } from "@/components/assistant-character";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,18 +82,19 @@ export default function Home() {
             <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
               <Link href="/docs">Docs</Link>
             </Button>
+            <ThemeToggle />
             <SignedOut>
               <Button asChild variant="ghost" size="sm">
                 <Link href="/sign-in">Sign in</Link>
               </Button>
               <Button asChild size="sm">
-                <Link href="/sign-up">Get started</Link>
+                <Link href="/join">Get started</Link>
               </Button>
             </SignedOut>
             <SignedIn>
               <Button asChild size="sm">
-                <Link href="/dashboard">
-                  Dashboard <ArrowRight className="size-4" />
+                <Link href="/continue">
+                  Open app <ArrowRight className="size-4" />
                 </Link>
               </Button>
             </SignedIn>
@@ -103,7 +106,11 @@ export default function Home() {
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent)]" />
-          <div className="mx-auto max-w-6xl px-4 py-24 text-center sm:px-6 sm:py-32">
+          {/* Desktop: floats on the left of the hero */}
+          <div className="absolute left-2 top-1/2 hidden -translate-y-1/2 lg:block xl:left-10 2xl:left-20">
+            <AssistantCharacter className="w-[190px] xl:w-[210px]" />
+          </div>
+          <div className="mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-32">
             <FadeInOnMount>
               <Badge variant="secondary" className="mb-6 gap-1.5 px-3 py-1">
                 <Sparkles className="size-3.5 text-primary" />
@@ -126,7 +133,7 @@ export default function Home() {
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <SignedOut>
                   <Button asChild size="xl" className="w-full sm:w-auto">
-                    <Link href="/sign-up">
+                    <Link href="/join">
                       Get started free <ArrowRight className="size-4" />
                     </Link>
                   </Button>
@@ -136,8 +143,8 @@ export default function Home() {
                 </SignedOut>
                 <SignedIn>
                   <Button asChild size="xl" className="w-full sm:w-auto">
-                    <Link href="/dashboard">
-                      Go to dashboard <ArrowRight className="size-4" />
+                    <Link href="/continue">
+                      Open app <ArrowRight className="size-4" />
                     </Link>
                   </Button>
                 </SignedIn>
@@ -156,6 +163,11 @@ export default function Home() {
                 </span>
               </div>
             </FadeInOnMount>
+
+            {/* Mobile/tablet: centered in the hero's empty space */}
+            <div className="mt-12 flex justify-center lg:hidden">
+              <AssistantCharacter className="w-40 sm:w-48" />
+            </div>
           </div>
         </section>
 
@@ -231,15 +243,15 @@ export default function Home() {
               <div className="mt-8 flex justify-center">
                 <SignedOut>
                   <Button asChild size="xl" variant="secondary">
-                    <Link href="/sign-up">
+                    <Link href="/join">
                       Create your account <ArrowRight className="size-4" />
                     </Link>
                   </Button>
                 </SignedOut>
                 <SignedIn>
                   <Button asChild size="xl" variant="secondary">
-                    <Link href="/dashboard">
-                      Open dashboard <ArrowRight className="size-4" />
+                    <Link href="/continue">
+                      Open app <ArrowRight className="size-4" />
                     </Link>
                   </Button>
                 </SignedIn>
@@ -254,7 +266,8 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
           <Brand />
           <p className="text-sm text-muted-foreground">
-            Built as a portfolio project demonstrating AI/ML + full-stack.
+            © {new Date().getFullYear()} SmartHire AI — Enterprise AI recruitment
+            platform.
           </p>
           <nav className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/docs" className="hover:text-foreground">

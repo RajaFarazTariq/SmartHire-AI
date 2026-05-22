@@ -1,32 +1,57 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/org";
 import { processCandidate } from "@/lib/extraction";
 import { logActivity } from "@/lib/activity";
+import { notifyStageChange } from "@/lib/notify";
 import { isPipelineStage } from "@/lib/pipeline";
+import { rateLimit } from "@/lib/rate-limit";
 
-export async function getUserCandidates() {
-  const user = await requireDbUser();
+// Fields needed by the candidates list view — deliberately excludes the large
+// rawText / fileUrl columns to keep the query and payload lean.
+const CANDIDATE_LIST_SELECT = {
+  id: true,
+  fullName: true,
+  filename: true,
+  currentTitle: true,
+  status: true,
+  stage: true,
+  fileType: true,
+  extractedSkills: true,
+  uploadedAt: true,
+} as const;
+
+export type CandidateListItem = {
+  id: string;
+  fullName: string | null;
+  filename: string;
+  currentTitle: string | null;
+  status: string;
+  stage: string;
+  fileType: string;
+  extractedSkills: string[];
+  uploadedAt: Date;
+};
+
+export async function getUserCandidates(): Promise<CandidateListItem[]> {
+  const { orgId } = await requireWorkspace();
   return prisma.candidate.findMany({
-    where: { userId: user.id },
+    where: { orgId },
     orderBy: { uploadedAt: "desc" },
+    select: CANDIDATE_LIST_SELECT,
   });
 }
 
 export async function getCandidate(id: string) {
-  const user = await requireDbUser();
-  return prisma.candidate.findFirst({
-    where: { id, userId: user.id },
-  });
+  const { orgId } = await requireWorkspace();
+  return prisma.candidate.findFirst({ where: { id, orgId } });
 }
 
 export async function getCandidateScores(id: string) {
-  const user = await requireDbUser();
-  const candidate = await prisma.candidate.findFirst({
-    where: { id, userId: user.id },
-  });
+  const { orgId } = await requireWorkspace();
+  const candidate = await prisma.candidate.findFirst({ where: { id, orgId } });
   if (!candidate) return [];
   return prisma.score.findMany({
     where: { candidateId: id },
@@ -39,15 +64,13 @@ export async function updateCandidateStageAction(
   id: string,
   stage: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const user = await requireDbUser();
+  const { user, orgId } = await requireWorkspace();
 
   if (!isPipelineStage(stage)) {
     return { ok: false, error: "Invalid stage" };
   }
 
-  const candidate = await prisma.candidate.findFirst({
-    where: { id, userId: user.id },
-  });
+  const candidate = await prisma.candidate.findFirst({ where: { id, orgId } });
   if (!candidate) {
     return { ok: false, error: "Candidate not found" };
   }
@@ -55,10 +78,14 @@ export async function updateCandidateStageAction(
   await prisma.candidate.update({ where: { id }, data: { stage } });
 
   await logActivity(
+    orgId,
     user.id,
     "candidate.stage_changed",
     `Moved "${candidate.fullName ?? candidate.filename}" to ${stage}`,
   );
+
+  // Notify the applicant (if this candidate came through the portal).
+  await notifyStageChange(id, stage);
 
   revalidatePath(`/candidates/${id}`);
   revalidatePath("/candidates");
@@ -69,11 +96,17 @@ export async function updateCandidateStageAction(
 export async function extractCandidateAction(
   id: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const user = await requireDbUser();
+  const { user, orgId } = await requireWorkspace();
 
-  const candidate = await prisma.candidate.findFirst({
-    where: { id, userId: user.id },
-  });
+  const limit = rateLimit(`extract:${user.id}`, 15, 60_000);
+  if (!limit.ok) {
+    return {
+      ok: false,
+      error: `Too many extractions. Try again in ${limit.retryAfter}s.`,
+    };
+  }
+
+  const candidate = await prisma.candidate.findFirst({ where: { id, orgId } });
   if (!candidate) {
     return { ok: false, error: "Candidate not found" };
   }
@@ -95,7 +128,7 @@ export async function bulkUpdateStageAction(
   ids: string[],
   stage: string,
 ): Promise<{ ok: boolean; count?: number; error?: string }> {
-  const user = await requireDbUser();
+  const { user, orgId } = await requireWorkspace();
 
   if (!isPipelineStage(stage)) {
     return { ok: false, error: "Invalid stage" };
@@ -105,15 +138,19 @@ export async function bulkUpdateStageAction(
   }
 
   const result = await prisma.candidate.updateMany({
-    where: { id: { in: ids }, userId: user.id },
+    where: { id: { in: ids }, orgId },
     data: { stage },
   });
 
   await logActivity(
+    orgId,
     user.id,
     "candidate.stage_changed",
     `Moved ${result.count} candidate${result.count === 1 ? "" : "s"} to ${stage}`,
   );
+
+  // Notify each affected applicant (no-op for recruiter-uploaded candidates).
+  await Promise.all(ids.map((cid) => notifyStageChange(cid, stage)));
 
   revalidatePath("/candidates");
   revalidatePath("/dashboard");
@@ -121,9 +158,9 @@ export async function bulkUpdateStageAction(
 }
 
 export async function getCandidateNotes(candidateId: string) {
-  const user = await requireDbUser();
+  const { orgId } = await requireWorkspace();
   const candidate = await prisma.candidate.findFirst({
-    where: { id: candidateId, userId: user.id },
+    where: { id: candidateId, orgId },
   });
   if (!candidate) return [];
   return prisma.note.findMany({
@@ -137,7 +174,7 @@ export async function addNoteAction(
   candidateId: string,
   body: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const user = await requireDbUser();
+  const { user, orgId } = await requireWorkspace();
 
   const trimmed = body.trim();
   if (!trimmed) return { ok: false, error: "Note can't be empty" };
@@ -146,7 +183,7 @@ export async function addNoteAction(
   }
 
   const candidate = await prisma.candidate.findFirst({
-    where: { id: candidateId, userId: user.id },
+    where: { id: candidateId, orgId },
   });
   if (!candidate) return { ok: false, error: "Candidate not found" };
 
@@ -161,12 +198,16 @@ export async function addNoteAction(
 export async function deleteNoteAction(
   noteId: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const user = await requireDbUser();
+  const { user, orgId, role } = await requireWorkspace();
 
+  // A note can be removed by its author or an org admin.
   const note = await prisma.note.findFirst({
-    where: { id: noteId, userId: user.id },
+    where: { id: noteId, candidate: { orgId } },
   });
   if (!note) return { ok: false, error: "Note not found" };
+  if (note.userId !== user.id && role !== "org:admin") {
+    return { ok: false, error: "You can only delete your own notes." };
+  }
 
   await prisma.note.delete({ where: { id: noteId } });
 

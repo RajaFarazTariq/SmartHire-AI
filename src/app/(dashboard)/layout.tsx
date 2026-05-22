@@ -1,4 +1,4 @@
-import { requireDbUser } from "@/lib/auth";
+import { requireWorkspace } from "@/lib/org";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 
 export default async function DashboardLayout({
@@ -6,13 +6,16 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireDbUser();
+  // Middleware guarantees an authenticated user with an active organization
+  // before this renders (otherwise it redirects to /onboarding).
+  const workspace = await requireWorkspace();
 
   return (
     <DashboardShell
-      email={user.email}
-      username={user.username}
-      fullName={user.fullName}
+      email={workspace.user.email}
+      username={workspace.user.username}
+      fullName={workspace.user.fullName}
+      role={workspace.role}
     >
       {children}
     </DashboardShell>

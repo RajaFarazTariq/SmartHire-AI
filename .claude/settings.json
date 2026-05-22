@@ -58,7 +58,16 @@
       "PowerShell(npm run db:migrate -- --name enterprise_pipeline_activity 2>&1)",
       "PowerShell(node -e \"console.log\\('recharts', require\\('c:/Projects/SmartHire-AI/node_modules/recharts/package.json'\\).version\\)\")",
       "PowerShell(npm install recharts@^2.15 2>&1)",
-      "PowerShell(npm run db:migrate -- --name add_notes 2>&1)"
+      "PowerShell(npm run db:migrate -- --name add_notes 2>&1)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue; \"killed $_\" } } else { \"port 3000 free\" })",
+      "PowerShell(npm run db:migrate -- --name add_org_scoping 2>&1)",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { $c.OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue; \"killed PID $_\" } } else { \"port 3000 free\" })",
+      "PowerShell(curl.exe -sS -o nul -w \"landing=%{http_code}`n\" http://localhost:3000/)",
+      "PowerShell(curl.exe -sS -o nul -w \"dashboard=%{http_code}`n\" http://localhost:3000/dashboard)",
+      "PowerShell(npm install \"@clerk/nextjs@^5\" 2>&1)",
+      "PowerShell(node -e \"console.log\\('clerk', require\\('c:/Projects/SmartHire-AI/node_modules/@clerk/nextjs/package.json'\\).version\\)\")",
+      "PowerShell(\"latest \\(v6\\): \" + \\(npm view @clerk/nextjs version\\); \"latest 5.x: \" + \\(npm view \"@clerk/nextjs@5\" version\\); \"latest 6.x: \" + \\(npm view \"@clerk/nextjs@6\" version\\))",
+      "PowerShell(npm install \"@clerk/nextjs@6\" 2>&1)"
     ]
   }
 }

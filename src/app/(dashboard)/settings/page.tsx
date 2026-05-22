@@ -1,6 +1,7 @@
 import { Mail, User, AtSign, Building2 } from "lucide-react";
 
-import { requireDbUser } from "@/lib/auth";
+import { requireWorkspace } from "@/lib/org";
+import { roleLabel } from "@/lib/rbac";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -13,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default async function SettingsPage() {
-  const user = await requireDbUser();
+  const { user, role } = await requireWorkspace();
 
   const fields = [
     { icon: User, label: "Full name", value: user.fullName },
@@ -78,14 +79,15 @@ export default async function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between rounded-lg border border-dashed p-4">
+          <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
-              <p className="text-sm font-medium">Multi-team organizations</p>
+              <p className="text-sm font-medium">Your role</p>
               <p className="text-sm text-muted-foreground">
-                Invite recruiters and managers to a shared workspace.
+                Manage members and switch organizations from the switcher in the
+                top bar.
               </p>
             </div>
-            <Badge variant="secondary">Coming soon</Badge>
+            <Badge variant="secondary">{roleLabel(role)}</Badge>
           </div>
         </CardContent>
       </Card>

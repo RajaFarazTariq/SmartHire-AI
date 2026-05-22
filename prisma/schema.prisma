@@ -11,23 +11,28 @@ datasource db {
 }
 
 model User {
-  id        String   @id // matches Clerk userId
-  email     String   @unique
-  username  String?  @unique // synced from Clerk; nullable for accounts created before username was required
-  fullName  String? // synced from Clerk first + last name
-  createdAt DateTime @default(now())
+  id          String   @id // matches Clerk userId
+  email       String   @unique
+  username    String?  @unique // synced from Clerk; nullable for accounts created before username was required
+  fullName    String? // synced from Clerk first + last name
+  accountType String   @default("recruiter") // "recruiter" (org member) | "applicant" (self-service)
+  createdAt   DateTime @default(now())
 
-  jobs         Job[]
-  candidates   Candidate[]
-  activityLogs ActivityLog[]
-  notes        Note[]
+  jobs          Job[]
+  candidates    Candidate[]
+  activityLogs  ActivityLog[]
+  notes         Note[]
+  applications  Application[]      @relation("UserApplications")
+  profile       CandidateProfile?
+  notifications Notification[]
 
   @@map("users")
 }
 
 model Job {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String // creator (Clerk userId)
+  orgId           String? // owning Clerk organization
   title           String // e.g. "Senior Backend Engineer"
   company         String?
   description     String   @db.Text
@@ -37,16 +42,19 @@ model Job {
   pineconeId      String?
   createdAt       DateTime @default(now())
 
-  user   User     @relation(fields: [userId], references: [id])
-  scores Score[]
+  user         User          @relation(fields: [userId], references: [id])
+  scores       Score[]
+  applications Application[]
 
   @@index([userId])
+  @@index([orgId])
   @@map("jobs")
 }
 
 model Candidate {
   id                String   @id @default(cuid())
   userId            String // recruiter who uploaded
+  orgId             String? // owning Clerk organization
   fullName          String?
   email             String?
   phone             String?
@@ -60,15 +68,21 @@ model Candidate {
   currentTitle      String?
   pineconeId        String?
   status            String   @default("processing") // AI pipeline: processing | ready | error
-  stage             String   @default("Applied") // hiring pipeline: Applied | Shortlisted | Interview | Rejected | Hired
+  stage             String   @default("Applied") // hiring pipeline (see lib/pipeline.ts)
+  linkedinUrl       String? // applicant-supplied (self-service apply)
+  githubUrl         String?
+  portfolioUrl      String?
+  coverNote         String?  @db.Text
   uploadedAt        DateTime @default(now())
 
-  user   User     @relation(fields: [userId], references: [id])
-  scores Score[]
-  notes  Note[]
+  user        User         @relation(fields: [userId], references: [id])
+  scores      Score[]
+  notes       Note[]
+  application Application?
 
   @@index([userId])
-  @@index([userId, stage])
+  @@index([orgId])
+  @@index([orgId, stage])
   @@map("candidates")
 }
 
@@ -108,9 +122,27 @@ model Note {
   @@map("notes")
 }
 
+model Application {
+  id          String   @id @default(cuid())
+  applicantId String // Clerk userId of the applicant
+  jobId       String
+  candidateId String   @unique // the resume/profile created for this application
+  createdAt   DateTime @default(now())
+
+  applicant User      @relation("UserApplications", fields: [applicantId], references: [id])
+  job       Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([applicantId, jobId])
+  @@index([applicantId])
+  @@index([jobId])
+  @@map("applications")
+}
+
 model ActivityLog {
   id        String   @id @default(cuid())
   userId    String
+  orgId     String? // owning Clerk organization
   type      String // e.g. job.created, candidate.uploaded, candidates.scored, candidate.stage_changed
   message   String
   createdAt DateTime @default(now())
@@ -118,5 +150,51 @@ model ActivityLog {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+  @@index([orgId, createdAt])
   @@map("activity_logs")
+}
+
+// One-per-user profile for candidates (job seekers). Persists across
+// applications so resume/skills/links are entered once and reused.
+model CandidateProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  headline     String? // e.g. "Senior Frontend Engineer"
+  location     String?
+  phone        String?
+  bio          String?  @db.Text
+  skills       String[]
+  experience   Json? // [{ title, company, period, description }]
+  education    Json? // [{ school, degree, period }]
+  linkedinUrl  String?
+  githubUrl    String?
+  portfolioUrl String?
+  websiteUrl   String?
+  resumeUrl    String? // primary resume (Vercel Blob)
+  resumeName   String?
+  resumeType   String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_profiles")
+}
+
+// In-app notifications (status changes, interview updates, system messages).
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String // application.status | application.submitted | system
+  title     String
+  body      String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }

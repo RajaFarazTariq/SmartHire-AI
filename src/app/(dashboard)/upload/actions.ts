@@ -1,8 +1,8 @@
 "use server";
 
 import { put } from "@vercel/blob";
-import { requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/org";
 import { detectFileType, extractResumeText } from "@/lib/parsers";
 import { processCandidate } from "@/lib/extraction";
 import { logActivity } from "@/lib/activity";
@@ -16,7 +16,7 @@ export type UploadResumeResult =
 export async function uploadResumeAction(
   formData: FormData,
 ): Promise<UploadResumeResult> {
-  const user = await requireDbUser();
+  const { user, orgId } = await requireWorkspace();
   const file = formData.get("file");
 
   if (!(file instanceof File)) {
@@ -62,6 +62,7 @@ export async function uploadResumeAction(
   const candidate = await prisma.candidate.create({
     data: {
       userId: user.id,
+      orgId,
       filename: file.name,
       fileUrl: blob.url,
       fileType,
@@ -72,6 +73,7 @@ export async function uploadResumeAction(
   });
 
   await logActivity(
+    orgId,
     user.id,
     "candidate.uploaded",
     `Uploaded resume "${file.name}"`,

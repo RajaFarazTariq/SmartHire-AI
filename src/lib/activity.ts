@@ -13,12 +13,13 @@ export type ActivityType =
  * can't break the action that triggered it.
  */
 export async function logActivity(
+  orgId: string,
   userId: string,
   type: ActivityType,
   message: string,
 ) {
   try {
-    await prisma.activityLog.create({ data: { userId, type, message } });
+    await prisma.activityLog.create({ data: { orgId, userId, type, message } });
   } catch (err) {
     console.error("Failed to write activity log:", err);
   }

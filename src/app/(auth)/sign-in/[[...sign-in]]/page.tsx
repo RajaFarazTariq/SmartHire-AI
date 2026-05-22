@@ -3,5 +3,11 @@ import { SignIn } from "@clerk/nextjs";
 import { authPageAppearance } from "@/lib/clerk-appearance";
 
 export default function SignInPage() {
-  return <SignIn appearance={authPageAppearance} />;
+  return (
+    <SignIn
+      appearance={authPageAppearance}
+      signUpUrl="/join"
+      forceRedirectUrl="/continue"
+    />
+  );
 }

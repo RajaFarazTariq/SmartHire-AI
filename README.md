@@ -1,8 +1,8 @@
-# AI Resume Screening & Recruitment System
+# SmartHire AI
 
-An AI-powered recruitment platform that automatically parses resumes, extracts candidate insights using NLP, and ranks applicants against job descriptions with explainable multi-signal scoring.
+SmartHire AI is an enterprise recruitment platform that automatically parses resumes, extracts candidate insights with NLP, and ranks applicants against job descriptions using explainable, multi-signal AI scoring — helping hiring teams screen high volumes of applicants in seconds.
 
-Built with modern full-stack technologies including Next.js 15, TypeScript, Gemini AI, Pinecone, PostgreSQL, and Tailwind CSS.
+The platform is built for multi-team organizations with role-based access, organization-scoped data, audit-ready activity tracking, and a production-grade architecture. It runs on Next.js 15, TypeScript, Google Gemini, Pinecone, PostgreSQL, and Tailwind CSS.
 
 ---
 
@@ -127,66 +127,35 @@ npm run dev
 
 ---
 
-## 📌 Development Roadmap
+## 🧩 Platform Capabilities
 
-### ✅ Phase 1 — Project Setup
+### Organizations & access control
 
-* Next.js 15 + TypeScript setup
-* Tailwind CSS configuration
-* Project structure initialization
+* Multi-team organizations with shared, org-scoped data
+* Role-based access (Admin / Recruiter / Manager)
+* Authentication, protected routes, and session management
 
-### 🔐 Phase 2 — Authentication
+### Job & candidate management
 
-* Clerk authentication
-* Protected routes
-* User sessions
+* Job creation, editing, and detail views
+* Bulk resume upload with PDF/DOCX parsing
+* Hiring pipeline stages (Applied → Shortlisted → Interview → Rejected → Hired)
+* Candidate filtering, sorting, search, and bulk actions
+* Recruiter notes and candidate profiles with an inline resume viewer
 
-### 🗄 Phase 3 — Database & ORM
+### AI matching & ranking
 
-* PostgreSQL setup
-* Prisma schema & migrations
+* Structured resume extraction (skills, experience, education)
+* Semantic candidate–job matching via vector embeddings
+* Composite multi-signal scoring with skill-gap analysis
+* Explainable, AI-generated recruiter summaries per candidate
 
-### 📄 Phase 4 — Job Management
+### Analytics & operations
 
-* Job CRUD operations
-* Job detail pages
-
-### 📤 Phase 5 — Resume Upload
-
-* Bulk file upload
-* PDF/DOCX parsing
-* Blob storage integration
-
-### 🤖 Phase 6 — AI Extraction
-
-* Structured resume parsing
-* Skill extraction
-* Embedding generation
-
-### 📊 Phase 7 — Candidate Ranking
-
-* Semantic similarity scoring
-* Composite AI ranking
-* AI-generated recruiter summaries
-
-### 📈 Phase 8 — Recruiter Dashboard
-
-* Ranked candidate tables
-* Filtering & analytics
-* Skill-gap visualization
-
-### 👤 Phase 9 — Candidate Profiles
-
-* Resume viewer
-* Match history
-* Candidate details
-
-### ✨ Phase 10 — Production Polish
-
-* Mobile responsiveness
-* Dark mode
-* CSV export
-* Performance optimization
+* Recruiter dashboard with KPIs, pipeline and score analytics
+* Activity tracking for audit-ready operations
+* CSV export of ranked candidates
+* Responsive UI, dark mode, and performance-optimized rendering
 
 ---
 
@@ -201,32 +170,27 @@ npm run dev
 
 ---
 
-## 📊 Free-Tier Friendly
+## ☁️ Infrastructure
 
-This project is designed to run entirely on free-tier services:
+SmartHire AI runs on managed, horizontally scalable cloud services, so it grows from a single team to organization-wide deployment without re-architecture:
 
-* Gemini API
-* Pinecone
-* Neon PostgreSQL
-* Vercel Hosting
-* Clerk Authentication
-
-Estimated monthly cost: **$0**
+* Google Gemini — extraction & AI summaries
+* Pinecone — vector search for semantic matching
+* Neon PostgreSQL — primary datastore
+* Vercel — hosting, serverless compute, and blob storage
+* Clerk — authentication & organization management
 
 ---
 
-## 🎯 Why This Project Matters
+## 🎯 Why SmartHire AI
 
-This project demonstrates:
+SmartHire AI helps recruiters, HR teams, and organizations hire faster and more objectively:
 
-* AI/ML integration in real-world workflows
-* NLP & semantic search
-* Vector databases & embeddings
-* Full-stack architecture
-* Modern recruiter-focused UX
-* Explainable AI systems
-
-It is designed as a production-grade portfolio project for AI Engineering, Data Science, Full-Stack Development, and ML roles.
+* Screen high volumes of resumes in seconds instead of hours
+* Rank candidates with explainable, multi-signal AI scores recruiters can trust
+* Standardize evaluation across the team with shared, organization-scoped data
+* Surface the strongest matches per role with semantic search and skill-gap analysis
+* Keep hiring auditable with activity tracking and role-based access control
 
 ---
 
@@ -252,4 +216,4 @@ It is designed as a production-grade portfolio project for AI Engineering, Data 
 
 ---
 
-Built with ❤️ using AI + Full-Stack Engineering.
+SmartHire AI — intelligent recruitment screening for modern hiring teams.

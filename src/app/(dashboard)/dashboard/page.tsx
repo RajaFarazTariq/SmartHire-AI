@@ -9,7 +9,7 @@ import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import {
   PipelineChart,
   ScoreDistributionChart,
-} from "@/components/dashboard/charts";
+} from "@/components/dashboard/charts-lazy";
 import { FadeIn } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   const greeting = stats.fullName ?? stats.username ?? stats.email.split("@")[0];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title={`Welcome back, ${greeting}`}
         description="Your recruitment overview and hiring analytics."
@@ -52,7 +52,7 @@ export default async function DashboardPage() {
       />
 
       {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <FadeIn delay={0.05}>
           <Card className="h-full">
             <CardHeader>
@@ -85,7 +85,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Top matches + activity */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {stats.topMatches.length > 0 ? (
             <FadeIn delay={0.05}>
@@ -116,9 +116,16 @@ export default async function DashboardPage() {
 
         <FadeIn delay={0.1}>
           <Card className="h-full">
-            <CardHeader>
-              <CardTitle>Recent activity</CardTitle>
-              <CardDescription>Latest actions in your workspace</CardDescription>
+            <CardHeader className="flex items-center justify-between">
+              <div>
+                <CardTitle>Recent activity</CardTitle>
+                <CardDescription>Latest actions in your workspace</CardDescription>
+              </div>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/activity">
+                  View all <ArrowRight className="size-4" />
+                </Link>
+              </Button>
             </CardHeader>
             <CardContent>
               <ActivityFeed items={stats.recentActivity} />
@@ -155,10 +162,10 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="group flex items-center justify-between rounded-lg border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-accent"
+      className="group flex items-center justify-between rounded-lg border bg-card p-3 transition-colors hover:border-primary/40 hover:bg-accent"
     >
-      <span className="flex items-center gap-3">
-        <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <span className="flex items-center gap-2.5">
+        <span className="flex size-8 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Icon className="size-4" />
         </span>
         <span className="text-sm font-medium">{label}</span>

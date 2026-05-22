@@ -42,7 +42,7 @@ export async function upsertCandidateVector(
 }
 
 export async function queryByVector(
-  userId: string,
+  orgId: string,
   vector: number[],
   topK: number,
 ): Promise<{ id: string; score: number }[]> {
@@ -51,7 +51,7 @@ export async function queryByVector(
   const res = await index.query({
     vector,
     topK,
-    filter: { userId: { $eq: userId } },
+    filter: { orgId: { $eq: orgId } },
     includeMetadata: false,
   });
   return (res.matches ?? []).map((m) => ({ id: m.id, score: m.score ?? 0 }));
