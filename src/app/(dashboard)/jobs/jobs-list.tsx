@@ -1,9 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Job } from "@prisma/client";
-import { Search, Briefcase, ArrowRight, Plus } from "lucide-react";
+import {
+  Search,
+  Briefcase,
+  ArrowRight,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { motion } from "motion/react";
 
 import { Input } from "@/components/ui/input";
@@ -11,9 +17,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { JobCardMenu } from "./job-card-menu";
+import type { JobListItem } from "./actions";
 
-export function JobsList({ jobs }: { jobs: Job[] }) {
+const PAGE_SIZE = 12;
+
+export function JobsList({ jobs }: { jobs: JobListItem[] }) {
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -25,6 +39,13 @@ export function JobsList({ jobs }: { jobs: Job[] }) {
         j.requiredSkills.some((s) => s.toLowerCase().includes(q)),
     );
   }, [jobs, query]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   if (jobs.length === 0) {
     return (
@@ -67,7 +88,7 @@ export function JobsList({ jobs }: { jobs: Job[] }) {
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((job, i) => (
+          {paged.map((job, i) => (
             <motion.div
               key={job.id}
               initial={{ opacity: 0, y: 12 }}
@@ -117,6 +138,37 @@ export function JobsList({ jobs }: { jobs: Job[] }) {
               </Card>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {filtered.length > PAGE_SIZE && (
+        <div className="mt-6 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+            {Math.min(currentPage * PAGE_SIZE, filtered.length)} of{" "}
+            {filtered.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="size-4" /> Prev
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

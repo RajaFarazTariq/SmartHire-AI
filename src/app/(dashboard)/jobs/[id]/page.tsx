@@ -6,6 +6,7 @@ import { getJob, getJobScores } from "../actions";
 import { JobDetailActions } from "../job-detail-actions";
 import { ScoreButton } from "../score-button";
 import { CandidateRanking } from "../candidate-ranking";
+import { RecommendationsPanel } from "../recommendations-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,6 +103,10 @@ export default async function JobDetailPage({
       </div>
 
       <section className="mt-10">
+        <RecommendationsPanel jobId={job.id} />
+      </section>
+
+      <section className="mt-6">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Candidate ranking</h2>

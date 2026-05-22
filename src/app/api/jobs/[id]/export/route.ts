@@ -1,4 +1,4 @@
-import { requireDbUser } from "@/lib/auth";
+import { requireWorkspace } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
 
 function csvCell(value: string | number): string {
@@ -11,10 +11,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const user = await requireDbUser();
+  const { orgId } = await requireWorkspace();
 
   const job = await prisma.job.findFirst({
-    where: { id, userId: user.id },
+    where: { id, orgId },
   });
   if (!job) {
     return new Response("Not found", { status: 404 });

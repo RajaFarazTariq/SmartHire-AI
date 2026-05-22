@@ -1,6 +1,6 @@
 import { get } from "@vercel/blob";
 
-import { requireDbUser } from "@/lib/auth";
+import { requireWorkspace } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -13,10 +13,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const user = await requireDbUser();
+  const { orgId } = await requireWorkspace();
 
   const candidate = await prisma.candidate.findFirst({
-    where: { id, userId: user.id },
+    where: { id, orgId },
   });
   if (!candidate) {
     return new Response("Not found", { status: 404 });

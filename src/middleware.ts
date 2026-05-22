@@ -1,19 +1,44 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-const isProtectedRoute = createRouteMatcher([
+// Recruiter/admin area — needs an authenticated user AND an active organization.
+const isOrgRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/jobs(.*)",
   "/candidates(.*)",
   "/upload(.*)",
+  "/settings(.*)",
+  "/organization(.*)",
+  "/activity(.*)",
   "/api/jobs(.*)",
   "/api/candidates(.*)",
 ]);
 
-export default clerkMiddleware((auth, req) => {
-  if (isProtectedRoute(req)) {
-    const { userId, redirectToSignIn } = auth();
-    if (!userId) {
-      return redirectToSignIn({ returnBackUrl: req.url });
+// Authenticated-only area — candidates have no org, so these must NOT be org-gated.
+const isAuthOnlyRoute = createRouteMatcher([
+  "/portal(.*)",
+  "/continue(.*)",
+  "/onboarding(.*)",
+]);
+
+const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  const { userId, orgId, redirectToSignIn } = await auth();
+
+  if (isOrgRoute(req)) {
+    if (!userId) return redirectToSignIn({ returnBackUrl: req.url });
+    // Authenticated but no active organization. New recruiters go create one;
+    // candidates (also org-less) get bounced to /portal by the onboarding page.
+    if (!orgId) return NextResponse.redirect(new URL("/onboarding", req.url));
+    return;
+  }
+
+  if (isAuthOnlyRoute(req)) {
+    if (!userId) return redirectToSignIn({ returnBackUrl: req.url });
+    // Already in an org? Onboarding is pointless — go to the dashboard.
+    if (isOnboardingRoute(req) && orgId) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
 });

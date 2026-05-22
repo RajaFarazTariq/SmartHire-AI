@@ -1,7 +1,7 @@
 "use server";
 
-import { requireDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireWorkspace } from "@/lib/org";
 import { PIPELINE_STAGES, type PipelineStage } from "@/lib/pipeline";
 
 const SCORE_BUCKETS = [
@@ -12,9 +12,9 @@ const SCORE_BUCKETS = [
 ];
 
 export async function getDashboardStats() {
-  const user = await requireDbUser();
-  const where = { userId: user.id };
-  const scoreWhere = { job: { userId: user.id } };
+  const { user, orgId } = await requireWorkspace();
+  const where = { orgId };
+  const scoreWhere = { job: { orgId } };
 
   const [
     jobCount,

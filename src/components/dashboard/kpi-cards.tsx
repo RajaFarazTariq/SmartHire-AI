@@ -43,7 +43,7 @@ export function KpiCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (
@@ -53,20 +53,20 @@ export function KpiCards({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.05, ease: "easeOut" }}
           >
-            <Card className="transition-shadow hover:shadow-md">
+            <Card className="gap-0 py-4 transition-shadow hover:shadow-md">
               <CardContent className="flex items-center justify-between gap-2 px-4">
                 <div className="min-w-0">
                   <p className="truncate text-xs text-muted-foreground">
                     {c.label}
                   </p>
-                  <p className="mt-1 text-2xl font-bold tracking-tight tabular-nums">
+                  <p className="mt-0.5 text-xl font-bold tracking-tight tabular-nums">
                     {c.value}
                   </p>
                 </div>
                 <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${c.tint}`}
+                  className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${c.tint}`}
                 >
-                  <Icon className="size-5" />
+                  <Icon className="size-4" />
                 </span>
               </CardContent>
             </Card>

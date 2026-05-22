@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { Candidate } from "@prisma/client";
 import {
   Search,
   Users,
@@ -12,6 +11,8 @@ import {
   ArrowUpDown,
   Loader2,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
@@ -23,7 +24,7 @@ import {
   STAGE_CHART_COLORS,
   isPipelineStage,
 } from "@/lib/pipeline";
-import { bulkUpdateStageAction } from "./actions";
+import { bulkUpdateStageAction, type CandidateListItem } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,17 +52,29 @@ function statusVariant(status: string) {
   return "warning" as const;
 }
 
-function displayName(c: Candidate) {
+const PAGE_SIZE = 12;
+
+function displayName(c: CandidateListItem) {
   return c.fullName ?? c.filename;
 }
 
-export function CandidatesList({ candidates }: { candidates: Candidate[] }) {
+export function CandidatesList({
+  candidates,
+}: {
+  candidates: CandidateListItem[];
+}) {
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("All");
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+
+  // Reset to the first page whenever the result set changes.
+  useEffect(() => {
+    setPage(1);
+  }, [query, stageFilter, sortKey]);
 
   const stageCounts = useMemo(() => {
     const counts: Record<string, number> = { All: candidates.length };
@@ -97,6 +110,13 @@ export function CandidatesList({ candidates }: { candidates: Candidate[] }) {
       return b.uploadedAt.getTime() - a.uploadedAt.getTime();
     });
   }, [candidates, query, stageFilter, sortKey]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paged = visible.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -239,7 +259,7 @@ export function CandidatesList({ candidates }: { candidates: Candidate[] }) {
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((c, i) => (
+          {paged.map((c, i) => (
             <motion.div
               key={c.id}
               initial={{ opacity: 0, y: 12 }}
@@ -314,6 +334,37 @@ export function CandidatesList({ candidates }: { candidates: Candidate[] }) {
               </Card>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      {visible.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-muted-foreground">
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+            {Math.min(currentPage * PAGE_SIZE, visible.length)} of{" "}
+            {visible.length}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="size-4" /> Prev
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       )}
     </div>

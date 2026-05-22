@@ -37,8 +37,8 @@ export function computeExperienceScore(
 }
 
 /**
- * Scores every "ready" candidate for the given job and persists Score rows.
- * Auth is enforced by the caller; this operates on job.userId-scoped data.
+ * Scores every "ready" candidate in the job's organization and persists Score
+ * rows. Auth is enforced by the caller; this operates on org-scoped data.
  */
 export async function scoreJobCandidates(
   jobId: string,
@@ -47,7 +47,7 @@ export async function scoreJobCandidates(
   if (!job) throw new Error("Job not found");
 
   const candidates = await prisma.candidate.findMany({
-    where: { userId: job.userId, status: "ready" },
+    where: { orgId: job.orgId, status: "ready" },
   });
   if (candidates.length === 0) return { scored: 0 };
 
@@ -61,16 +61,18 @@ export async function scoreJobCandidates(
   ].join("\n");
 
   const simMap = new Map<string, number>();
-  try {
-    const jobVector = await embedText(jobText);
-    const matches = await queryByVector(
-      job.userId,
-      jobVector,
-      Math.max(candidates.length, 10),
-    );
-    for (const m of matches) simMap.set(m.id, m.score);
-  } catch (err) {
-    console.error("Semantic scoring unavailable:", err);
+  if (job.orgId) {
+    try {
+      const jobVector = await embedText(jobText);
+      const matches = await queryByVector(
+        job.orgId,
+        jobVector,
+        Math.max(candidates.length, 10),
+      );
+      for (const m of matches) simMap.set(m.id, m.score);
+    } catch (err) {
+      console.error("Semantic scoring unavailable:", err);
+    }
   }
 
   for (const candidate of candidates) {

@@ -28,6 +28,7 @@ export async function processCandidate(candidateId: string) {
     const embedding = await embedText(candidate.rawText);
     await upsertCandidateVector(candidate.id, embedding, {
       userId: candidate.userId,
+      orgId: candidate.orgId ?? "",
       fullName: data.fullName ?? candidate.filename,
       currentTitle: data.currentTitle ?? "",
       skills: data.skills,

@@ -3,6 +3,7 @@ import { SignedIn, SignedOut } from "@clerk/nextjs";
 import { ArrowRight } from "lucide-react";
 
 import { Brand } from "@/components/brand";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 
 export default function DocsLayout({
@@ -24,6 +25,7 @@ export default function DocsLayout({
             <Button asChild variant="ghost" size="sm">
               <Link href="/">Home</Link>
             </Button>
+            <ThemeToggle />
             <SignedOut>
               <Button asChild size="sm">
                 <Link href="/sign-up">Get started</Link>
