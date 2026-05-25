@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { auth } from "@clerk/nextjs/server";
 
 import { getOrCreateDbUser } from "@/lib/auth";
 import { markAsCandidate, CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
+import { getActiveOrgId, hasOrgMembership } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -28,25 +28,27 @@ export default async function ContinuePage() {
 
   if (!user) redirect("/sign-in");
 
-  let accountType = user.accountType;
-  if (intent === "candidate" && accountType !== CANDIDATE_ACCOUNT_TYPE) {
+  // Org membership is the source of truth (independent of accountType / stale
+  // session). An active org → straight to the recruiter app.
+  if (await getActiveOrgId()) redirect("/dashboard");
+
+  // Belongs to an org but none active in this session → send them to activate it
+  // (NOT the candidate portal). This is the case that caused recruiter misroutes.
+  if (await hasOrgMembership(user.id)) redirect("/onboarding");
+
+  // No organization at all → candidate side. Honour the role-chooser cookie.
+  if (intent === "candidate" && user.accountType !== CANDIDATE_ACCOUNT_TYPE) {
     try {
       await markAsCandidate(user.id);
     } catch (err) {
       console.error("/continue: markAsCandidate failed:", err);
     }
-    accountType = CANDIDATE_ACCOUNT_TYPE;
+  }
+  if (intent === "candidate" || user.accountType === CANDIDATE_ACCOUNT_TYPE) {
+    redirect("/portal");
   }
 
-  if (accountType === CANDIDATE_ACCOUNT_TYPE) redirect("/portal");
-
-  let orgId: string | null | undefined;
-  try {
-    ({ orgId } = await auth());
-  } catch (err) {
-    console.error("/continue: auth() failed:", err);
-  }
-
-  if (orgId) redirect("/dashboard");
+  // Brand-new recruiter who hasn't created an org yet.
   redirect("/onboarding");
 }
+

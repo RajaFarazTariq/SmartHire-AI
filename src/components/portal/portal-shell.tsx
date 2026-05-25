@@ -97,7 +97,10 @@ export function PortalShell({
           </nav>
 
           <div className="ml-auto flex items-center gap-1.5">
-            <NotificationsBell initialCount={unreadCount} />
+            <NotificationsBell
+              initialCount={unreadCount}
+              viewAllHref="/portal/notifications"
+            />
             <ThemeToggle />
             <UserButton
               appearance={{ elements: { avatarBox: "size-9" } }}

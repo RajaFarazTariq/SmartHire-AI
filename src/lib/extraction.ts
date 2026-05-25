@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
-import { extractResumeData, embedText } from "./gemini";
+import { embedText } from "./gemini";
+import { extractResumeData } from "./ai/tasks";
 import { upsertCandidateVector } from "./pinecone";
 import { extractionSchema } from "./validators/extraction";
 

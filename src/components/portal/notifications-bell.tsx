@@ -23,8 +23,10 @@ import {
 
 export function NotificationsBell({
   initialCount = 0,
+  viewAllHref,
 }: {
   initialCount?: number;
+  viewAllHref?: string;
 }) {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [count, setCount] = useState(initialCount);
@@ -144,13 +146,15 @@ export function NotificationsBell({
           )}
         </div>
 
-        <Link
-          href="/portal/notifications"
-          onClick={() => setOpen(false)}
-          className="block border-t px-3 py-2.5 text-center text-sm font-medium text-primary transition-colors hover:bg-accent"
-        >
-          View all notifications
-        </Link>
+        {viewAllHref && (
+          <Link
+            href={viewAllHref}
+            onClick={() => setOpen(false)}
+            className="block border-t px-3 py-2.5 text-center text-sm font-medium text-primary transition-colors hover:bg-accent"
+          >
+            View all notifications
+          </Link>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

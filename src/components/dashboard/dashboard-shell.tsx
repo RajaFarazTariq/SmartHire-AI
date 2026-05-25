@@ -8,6 +8,7 @@ import { roleLabel } from "@/lib/rbac";
 import { Brand } from "@/components/brand";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationsBell } from "@/components/portal/notifications-bell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -92,6 +93,7 @@ export function DashboardShell({
                 elements: { organizationSwitcherTrigger: "px-2 py-1.5" },
               }}
             />
+            <NotificationsBell />
             <ThemeToggle />
             <UserButton
               appearance={{ elements: { avatarBox: "size-9" } }}

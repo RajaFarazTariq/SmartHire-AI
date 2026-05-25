@@ -37,6 +37,29 @@ export async function getMyApplications(): Promise<MyApplication[]> {
   }));
 }
 
+export async function getApplicantInterviews(candidateId: string) {
+  const user = await requireDbUser();
+  // Confirm this candidate record belongs to the requesting applicant.
+  const candidate = await prisma.candidate.findFirst({
+    where: { id: candidateId, userId: user.id },
+    select: { id: true },
+  });
+  if (!candidate) return [];
+  return prisma.interview.findMany({
+    where: { candidateId },
+    orderBy: { scheduledAt: "asc" },
+    select: {
+      id: true,
+      type: true,
+      scheduledAt: true,
+      durationMins: true,
+      status: true,
+      meetingLink: true,
+      location: true,
+    },
+  });
+}
+
 export async function getApplicationDetail(id: string) {
   const user = await requireDbUser();
   return prisma.application.findFirst({

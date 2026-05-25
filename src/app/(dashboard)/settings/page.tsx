@@ -2,8 +2,10 @@ import { Mail, User, AtSign, Building2 } from "lucide-react";
 
 import { requireWorkspace } from "@/lib/org";
 import { roleLabel } from "@/lib/rbac";
+import { getEnabledRounds } from "../interviews/actions";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { InterviewRoundsCard } from "./interview-rounds-card";
 import {
   Card,
   CardContent,
@@ -15,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function SettingsPage() {
   const { user, role } = await requireWorkspace();
+  const enabledRounds = await getEnabledRounds();
 
   const fields = [
     { icon: User, label: "Full name", value: user.fullName },
@@ -67,6 +70,8 @@ export default async function SettingsPage() {
           <ThemeToggle />
         </CardContent>
       </Card>
+
+      <InterviewRoundsCard enabled={enabledRounds} />
 
       <Card>
         <CardHeader>

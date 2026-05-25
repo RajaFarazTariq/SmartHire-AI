@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
+  CalendarClock,
   UploadCloud,
   History,
   Building2,
@@ -61,6 +62,18 @@ export const dashboardNav: NavItem[] = [
       "hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:shadow-sm hover:shadow-emerald-500/15",
     active:
       "border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 text-emerald-700 shadow-sm shadow-emerald-500/20 dark:text-emerald-200",
+  },
+  {
+    title: "Interviews",
+    href: "/interviews",
+    icon: CalendarClock,
+    tile: "bg-pink-500/15 text-pink-500",
+    activeTile: "bg-pink-500 text-white",
+    accent: "bg-pink-500/50",
+    hover:
+      "hover:border-pink-500/40 hover:bg-pink-500/10 hover:shadow-sm hover:shadow-pink-500/15",
+    active:
+      "border-pink-500/40 bg-gradient-to-r from-pink-500/15 to-pink-500/5 text-pink-700 shadow-sm shadow-pink-500/20 dark:text-pink-200",
   },
   {
     title: "Upload",

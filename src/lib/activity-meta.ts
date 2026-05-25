@@ -5,6 +5,7 @@ import {
   UploadCloud,
   GitBranch,
   Sparkles,
+  CalendarClock,
   Activity,
   type LucideIcon,
 } from "lucide-react";
@@ -16,6 +17,7 @@ export const ACTIVITY_TYPES = [
   { value: "candidate.uploaded", label: "Resume uploaded" },
   { value: "candidate.stage_changed", label: "Stage changed" },
   { value: "candidates.scored", label: "Candidates scored" },
+  { value: "interview.scheduled", label: "Interview scheduled" },
 ] as const;
 
 export function activityIcon(type: string): LucideIcon {
@@ -32,6 +34,8 @@ export function activityIcon(type: string): LucideIcon {
       return GitBranch;
     case "candidates.scored":
       return Sparkles;
+    case "interview.scheduled":
+      return CalendarClock;
     default:
       return Activity;
   }

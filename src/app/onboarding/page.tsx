@@ -4,12 +4,19 @@ import { OrganizationList } from "@clerk/nextjs";
 import { Brand } from "@/components/brand";
 import { requireDbUser } from "@/lib/auth";
 import { CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
+import { getActiveOrgId, hasOrgMembership } from "@/lib/access";
 
 export default async function OnboardingPage() {
-  // Candidates have no organization and must never see org creation — send them
-  // to their portal instead.
   const user = await requireDbUser();
-  if (user.accountType === CANDIDATE_ACCOUNT_TYPE) redirect("/portal");
+
+  // Already have an active org → straight to the recruiter app.
+  if (await getActiveOrgId()) redirect("/dashboard");
+
+  // Recruiters who belong to an org (just not active here) must stay and pick it.
+  // Only TRUE candidates — no org membership at all — go to the portal.
+  if (!(await hasOrgMembership(user.id))) {
+    if (user.accountType === CANDIDATE_ACCOUNT_TYPE) redirect("/portal");
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-muted/30 p-6">

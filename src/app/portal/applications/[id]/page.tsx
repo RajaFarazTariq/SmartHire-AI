@@ -10,11 +10,16 @@ import {
   Github,
   Globe,
   Sparkles,
+  CalendarClock,
+  Video,
+  MapPin,
 } from "lucide-react";
 
-import { getApplicationDetail } from "../actions";
+import { getApplicationDetail, getApplicantInterviews } from "../actions";
 import { timeAgo } from "@/lib/activity-meta";
+import { cn } from "@/lib/utils";
 import { STAGE_DESCRIPTIONS, isPipelineStage } from "@/lib/pipeline";
+import { INTERVIEW_STATUS_STYLES } from "@/lib/interview";
 import { PortalHeader } from "@/components/portal/portal-header";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { ApplicationTimeline } from "@/components/portal/application-timeline";
@@ -35,6 +40,7 @@ export default async function ApplicationDetailPage({
   if (!app) notFound();
 
   const { job, candidate } = app;
+  const interviews = await getApplicantInterviews(candidate.id);
   const stageCopy = isPipelineStage(candidate.stage)
     ? STAGE_DESCRIPTIONS[candidate.stage]
     : "";
@@ -164,6 +170,64 @@ export default async function ApplicationDetailPage({
           )}
         </div>
       </div>
+
+      {/* Interviews */}
+      {interviews.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="size-4 text-primary" /> Your interviews
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {interviews.map((iv) => (
+              <div
+                key={iv.id}
+                className="flex flex-wrap items-center gap-3 rounded-lg border p-3"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <CalendarClock className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{iv.type}</p>
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>
+                      {new Date(iv.scheduledAt).toLocaleString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}{" "}
+                      · {iv.durationMins}m
+                    </span>
+                    {iv.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPin className="size-3.5" /> {iv.location}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                {iv.meetingLink && iv.status === "Scheduled" && (
+                  <Button asChild size="sm" variant="outline">
+                    <a href={iv.meetingLink} target="_blank" rel="noopener noreferrer">
+                      <Video className="size-4" /> Join
+                    </a>
+                  </Button>
+                )}
+                <Badge
+                  className={cn(
+                    "shrink-0 border-0",
+                    INTERVIEW_STATUS_STYLES[iv.status] ?? "",
+                  )}
+                >
+                  {iv.status}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Full resume preview */}
       <div className="mt-6">

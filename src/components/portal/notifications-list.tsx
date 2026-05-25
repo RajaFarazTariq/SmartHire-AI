@@ -2,7 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCheck, Inbox, Bell, GitBranch, FileCheck2 } from "lucide-react";
+import {
+  CheckCheck,
+  Inbox,
+  Bell,
+  GitBranch,
+  FileCheck2,
+  CalendarClock,
+  AtSign,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/activity-meta";
@@ -16,6 +24,8 @@ import {
 function iconFor(type: string) {
   if (type === "application.status") return GitBranch;
   if (type === "application.submitted") return FileCheck2;
+  if (type === "interview.scheduled") return CalendarClock;
+  if (type === "note.mention") return AtSign;
   return Bell;
 }
 
