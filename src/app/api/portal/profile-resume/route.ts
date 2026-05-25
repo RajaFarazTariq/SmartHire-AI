@@ -2,6 +2,7 @@ import { get } from "@vercel/blob";
 
 import { getOrCreateDbUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { docxHtmlResponse } from "@/lib/resume-html";
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -9,7 +10,7 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 // Streams the current candidate's primary (profile) resume.
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getOrCreateDbUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
 
@@ -23,6 +24,11 @@ export async function GET() {
   const result = await get(profile.resumeUrl, { access: "private" });
   if (!result || result.statusCode !== 200) {
     return new Response("File not found", { status: 404 });
+  }
+
+  const wantsHtml = new URL(req.url).searchParams.get("format") === "html";
+  if (wantsHtml && (profile.resumeType ?? "") === "docx") {
+    return docxHtmlResponse(result.stream);
   }
 
   return new Response(result.stream, {

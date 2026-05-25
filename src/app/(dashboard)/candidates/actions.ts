@@ -117,9 +117,14 @@ export async function extractCandidateAction(
     revalidatePath("/candidates");
     return { ok: true };
   } catch (err) {
+    const msg = err instanceof Error ? err.message : "Extraction failed";
+    const transient =
+      /503|overloaded|high demand|unavailable|429|rate limit|quota/i.test(msg);
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "Extraction failed",
+      error: transient
+        ? "The AI service is busy right now. Please try again in a moment."
+        : msg,
     };
   }
 }

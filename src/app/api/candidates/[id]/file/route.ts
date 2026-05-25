@@ -2,6 +2,7 @@ import { get } from "@vercel/blob";
 
 import { requireWorkspace } from "@/lib/org";
 import { prisma } from "@/lib/prisma";
+import { docxHtmlResponse } from "@/lib/resume-html";
 
 const CONTENT_TYPES: Record<string, string> = {
   pdf: "application/pdf",
@@ -9,7 +10,7 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -25,6 +26,11 @@ export async function GET(
   const result = await get(candidate.fileUrl, { access: "private" });
   if (!result || result.statusCode !== 200) {
     return new Response("File not found", { status: 404 });
+  }
+
+  const wantsHtml = new URL(req.url).searchParams.get("format") === "html";
+  if (wantsHtml && candidate.fileType === "docx") {
+    return docxHtmlResponse(result.stream);
   }
 
   return new Response(result.stream, {

@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   FileText,
-  ExternalLink,
   Mail,
   Phone,
   Briefcase,
@@ -21,8 +20,8 @@ import { StageSelect } from "../stage-select";
 import { MatchHistory } from "../match-history";
 import { NotesPanel } from "../notes-panel";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ResumeViewer } from "@/components/resume-viewer";
 
 function statusVariant(status: string) {
   if (status === "ready") return "success" as const;
@@ -105,37 +104,12 @@ export default async function CandidateDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Resume preview */}
         <div className="lg:col-span-2">
-          <Card className="h-full">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-base">Resume</CardTitle>
-              <Button asChild variant="outline" size="sm">
-                <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-4" /> Open
-                </a>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {candidate.fileType === "pdf" ? (
-                <iframe
-                  src={fileUrl}
-                  title={candidate.filename}
-                  className="h-[600px] w-full rounded-lg border bg-muted/30"
-                />
-              ) : (
-                <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-center">
-                  <FileText className="size-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    Inline preview isn&apos;t available for DOCX files.
-                  </p>
-                  <Button asChild size="sm" variant="outline">
-                    <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="size-4" /> Open file
-                    </a>
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ResumeViewer
+            fileType={candidate.fileType}
+            fileName={candidate.filename}
+            fileUrl={fileUrl}
+            height={620}
+          />
         </div>
 
         {/* Profile facts + skills */}

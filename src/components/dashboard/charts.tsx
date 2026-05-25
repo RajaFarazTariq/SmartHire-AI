@@ -1,8 +1,11 @@
 "use client";
 
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
+  CartesianGrid,
   Cell,
   ResponsiveContainer,
   Tooltip,
@@ -16,17 +19,37 @@ import {
   type PipelineStage,
 } from "@/lib/pipeline";
 
-const tooltipStyle = {
-  background: "var(--popover)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  color: "var(--popover-foreground)",
-  fontSize: 12,
-  padding: "6px 10px",
-} as const;
-
 const axisTick = { fill: "var(--muted-foreground)", fontSize: 12 } as const;
 
+const slug = (s: string) => s.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+
+// Shared premium tooltip — styled with our tokens, soft blur + shadow.
+function ChartTooltip({
+  active,
+  payload,
+  label,
+  suffix = "",
+}: {
+  active?: boolean;
+  payload?: { value?: number; payload?: { stage?: string } }[];
+  label?: string;
+  suffix?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0];
+  const title = point.payload?.stage ?? label;
+  return (
+    <div className="rounded-lg border bg-popover/95 px-3 py-2 shadow-xl backdrop-blur-sm">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <p className="text-sm font-semibold tabular-nums">
+        {point.value}
+        <span className="font-normal text-muted-foreground">{suffix}</span>
+      </p>
+    </div>
+  );
+}
+
+// Horizontal bars read far better than 8 cramped vertical labels.
 export function PipelineChart({
   stageCounts,
 }: {
@@ -38,24 +61,53 @@ export function PipelineChart({
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-        <XAxis
-          dataKey="stage"
-          tick={axisTick}
-          axisLine={{ stroke: "var(--border)" }}
-          tickLine={false}
-        />
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ top: 4, right: 16, left: 6, bottom: 0 }}
+        barCategoryGap={10}
+      >
+        <defs>
+          {data.map((d) => {
+            const c = STAGE_CHART_COLORS[d.stage];
+            return (
+              <linearGradient
+                key={d.stage}
+                id={`bar-${slug(d.stage)}`}
+                x1="0"
+                y1="0"
+                x2="1"
+                y2="0"
+              >
+                <stop offset="0%" stopColor={c} stopOpacity={0.9} />
+                <stop offset="100%" stopColor={c} stopOpacity={0.45} />
+              </linearGradient>
+            );
+          })}
+        </defs>
+        <XAxis type="number" hide allowDecimals={false} />
         <YAxis
-          allowDecimals={false}
+          type="category"
+          dataKey="stage"
+          width={140}
           tick={axisTick}
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} />
-        <Bar dataKey="count" radius={[6, 6, 0, 0]}>
+        <Tooltip
+          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          content={<ChartTooltip suffix=" candidates" />}
+        />
+        <Bar
+          dataKey="count"
+          radius={[0, 6, 6, 0]}
+          maxBarSize={20}
+          animationDuration={900}
+          animationEasing="ease-out"
+        >
           {data.map((d) => (
-            <Cell key={d.stage} fill={STAGE_CHART_COLORS[d.stage]} />
+            <Cell key={d.stage} fill={`url(#bar-${slug(d.stage)})`} />
           ))}
         </Bar>
       </BarChart>
@@ -69,12 +121,23 @@ export function ScoreDistributionChart({
   data: { range: string; count: number }[];
 }) {
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={240}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <defs>
+          <linearGradient id="score-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.95} />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.4} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid
+          vertical={false}
+          stroke="var(--border)"
+          strokeDasharray="3 3"
+        />
         <XAxis
           dataKey="range"
           tick={axisTick}
-          axisLine={{ stroke: "var(--border)" }}
+          axisLine={false}
           tickLine={false}
         />
         <YAxis
@@ -83,9 +146,71 @@ export function ScoreDistributionChart({
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--muted)" }} />
-        <Bar dataKey="count" radius={[6, 6, 0, 0]} fill="var(--primary)" />
+        <Tooltip
+          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+          content={<ChartTooltip suffix=" matches" />}
+        />
+        <Bar
+          dataKey="count"
+          radius={[6, 6, 0, 0]}
+          maxBarSize={56}
+          fill="url(#score-grad)"
+          animationDuration={900}
+          animationEasing="ease-out"
+        />
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function TrendAreaChart({
+  data,
+}: {
+  data: { week: string; count: number }[];
+}) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={data} margin={{ top: 10, right: 12, left: -16, bottom: 0 }}>
+        <defs>
+          <linearGradient id="trend-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.35} />
+            <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid
+          vertical={false}
+          stroke="var(--border)"
+          strokeDasharray="3 3"
+        />
+        <XAxis
+          dataKey="week"
+          tick={axisTick}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          allowDecimals={false}
+          tick={axisTick}
+          axisLine={false}
+          tickLine={false}
+          width={28}
+        />
+        <Tooltip
+          cursor={{ stroke: "var(--primary)", strokeOpacity: 0.3, strokeWidth: 2 }}
+          content={<ChartTooltip suffix=" uploads" />}
+        />
+        <Area
+          type="monotone"
+          dataKey="count"
+          stroke="var(--primary)"
+          strokeWidth={2.5}
+          fill="url(#trend-grad)"
+          dot={{ r: 3, fill: "var(--primary)", strokeWidth: 0 }}
+          activeDot={{ r: 5, strokeWidth: 0 }}
+          animationDuration={1000}
+          animationEasing="ease-out"
+        />
+      </AreaChart>
     </ResponsiveContainer>
   );
 }
