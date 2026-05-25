@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
 import { timeAgo } from "@/lib/activity-meta";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -127,7 +128,13 @@ export function JobsBrowser({
                 transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.3) }}
               >
                 <Link href={`/portal/jobs/${job.id}`} className="block h-full">
-                  <Card className="group h-full gap-0 p-5 transition-all hover:border-primary/40 hover:shadow-md">
+                  <Card
+                    className={cn(
+                      "group h-full gap-0 p-5",
+                      CARD_HOVER_BASE,
+                      CARD_HOVER.primary,
+                    )}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
