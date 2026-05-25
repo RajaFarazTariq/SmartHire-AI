@@ -1,25 +1,23 @@
 import Link from "next/link";
 import {
   ClipboardList,
-  Loader2,
-  CalendarCheck,
-  Trophy,
   ArrowRight,
   Building2,
   Search,
   UserRound,
   Briefcase,
-  type LucideIcon,
 } from "lucide-react";
 
 import { requireDbUser } from "@/lib/auth";
 import { getCandidateContext, profileCompleteness } from "@/lib/candidate";
 import { timeAgo } from "@/lib/activity-meta";
+import { cn } from "@/lib/utils";
+import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
 import { getMyApplications } from "./applications/actions";
 import { listOpenJobs, getAppliedJobIds } from "./jobs/actions";
 import { StatusBadge } from "@/components/portal/status-badge";
+import { PortalStatCards } from "@/components/portal/portal-stat-cards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -41,37 +39,13 @@ export default async function PortalHome() {
   const appliedSet = new Set(appliedIds);
   const recommended = jobs.filter((j) => !appliedSet.has(j.id)).slice(0, 3);
 
-  const stats: { label: string; value: number; icon: LucideIcon; tint: string }[] =
-    [
-      {
-        label: "Applications",
-        value: applications.length,
-        icon: ClipboardList,
-        tint: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-      },
-      {
-        label: "In review",
-        value: applications.filter(
-          (a) => !["Hired", "Rejected", "Applied"].includes(a.stage),
-        ).length,
-        icon: Loader2,
-        tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-      },
-      {
-        label: "Interviews",
-        value: applications.filter((a) =>
-          ["Interview Scheduled", "Technical Assessment"].includes(a.stage),
-        ).length,
-        icon: CalendarCheck,
-        tint: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-      },
-      {
-        label: "Offers",
-        value: applications.filter((a) => a.stage === "Hired").length,
-        icon: Trophy,
-        tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-      },
-    ];
+  const inReview = applications.filter(
+    (a) => !["Hired", "Rejected", "Applied"].includes(a.stage),
+  ).length;
+  const interviews = applications.filter((a) =>
+    ["Interview Scheduled", "Technical Assessment"].includes(a.stage),
+  ).length;
+  const offers = applications.filter((a) => a.stage === "Hired").length;
 
   const recent = applications.slice(0, 4);
 
@@ -95,32 +69,22 @@ export default async function PortalHome() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {stats.map((s) => {
-          const Icon = s.icon;
-          return (
-            <Card key={s.label} className="gap-0 py-4 transition-shadow hover:shadow-sm">
-              <CardContent className="flex items-center justify-between gap-2 px-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">{s.label}</p>
-                  <p className="mt-0.5 text-2xl font-bold tabular-nums">
-                    {s.value}
-                  </p>
-                </div>
-                <span
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${s.tint}`}
-                >
-                  <Icon className="size-5" />
-                </span>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <PortalStatCards
+        applications={applications.length}
+        inReview={inReview}
+        interviews={interviews}
+        offers={offers}
+      />
 
       {/* Profile completion nudge */}
       {completion < 100 && (
-        <Card className="border-primary/30 bg-primary/5">
+        <Card
+          className={cn(
+            "border-primary/30 bg-primary/5",
+            CARD_HOVER_BASE,
+            CARD_HOVER.primary,
+          )}
+        >
           <CardContent className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -150,7 +114,7 @@ export default async function PortalHome() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent applications */}
-        <Card>
+        <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.blue)}>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="text-base">Recent applications</CardTitle>
             {applications.length > 0 && (
@@ -189,7 +153,7 @@ export default async function PortalHome() {
         </Card>
 
         {/* Recommended jobs */}
-        <Card>
+        <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.violet)}>
           <CardHeader className="flex-row items-center justify-between">
             <CardTitle className="text-base">Recommended for you</CardTitle>
             <Link

@@ -3,6 +3,8 @@ import { Building2, Clock, ChevronRight, ClipboardList, Search } from "lucide-re
 
 import { getMyApplications } from "./actions";
 import { timeAgo } from "@/lib/activity-meta";
+import { cn } from "@/lib/utils";
+import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
 import { PortalHeader } from "@/components/portal/portal-header";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,7 +43,9 @@ export default async function ApplicationsPage() {
         <div className="space-y-3">
           {applications.map((a) => (
             <Link key={a.id} href={`/portal/applications/${a.id}`} className="block">
-              <Card className="group gap-0 transition-all hover:border-primary/40 hover:shadow-sm">
+              <Card
+                className={cn("group gap-0", CARD_HOVER_BASE, CARD_HOVER.primary)}
+              >
                 <CardContent className="flex items-center gap-4 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold transition-colors group-hover:text-primary">

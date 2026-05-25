@@ -23,8 +23,19 @@ const isAuthOnlyRoute = createRouteMatcher([
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 
+// Exact auth-page roots only (NOT their Clerk sub-routes like /sign-in/factor-one
+// or /sign-up/verify-email-address, which must keep working mid-flow).
+const isAuthPage = createRouteMatcher(["/sign-in", "/sign-up", "/join"]);
+
 export default clerkMiddleware(async (auth, req) => {
   const { userId, orgId, redirectToSignIn } = await auth();
+
+  // Already signed in but sitting on an auth page → send them to their home.
+  // Fixes the blank "already-signed-in" sign-in screen and the manual
+  // back-home → CTA detour after login.
+  if (userId && isAuthPage(req)) {
+    return NextResponse.redirect(new URL("/continue", req.url));
+  }
 
   if (isOrgRoute(req)) {
     if (!userId) return redirectToSignIn({ returnBackUrl: req.url });
