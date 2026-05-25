@@ -8,17 +8,29 @@ import {
   Briefcase,
   GraduationCap,
   Clock,
+  CalendarClock,
 } from "lucide-react";
 
 import {
   getCandidate,
   getCandidateScores,
-  getCandidateNotes,
+  listCandidateNotes,
 } from "../actions";
+import {
+  getCandidateInterviews,
+  getJobOptions,
+  getOrgMembers,
+  getSuggestedJobId,
+  getEnabledRounds,
+} from "../../interviews/actions";
+import { requireWorkspace } from "@/lib/org";
+import { isAdmin } from "@/lib/rbac";
+import { availableRounds } from "@/lib/interview";
 import { ExtractButton } from "../extract-button";
 import { StageSelect } from "../stage-select";
 import { MatchHistory } from "../match-history";
 import { NotesPanel } from "../notes-panel";
+import { InterviewsPanel } from "@/components/interviews/interviews-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResumeViewer } from "@/components/resume-viewer";
@@ -35,22 +47,31 @@ export default async function CandidateDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [candidate, scores, rawNotes] = await Promise.all([
+  const [
+    candidate,
+    scores,
+    notes,
+    interviews,
+    jobOptions,
+    orgMembers,
+    ws,
+    suggestedJobId,
+    enabledRounds,
+  ] = await Promise.all([
     getCandidate(id),
     getCandidateScores(id),
-    getCandidateNotes(id),
+    listCandidateNotes(id),
+    getCandidateInterviews(id),
+    getJobOptions(),
+    getOrgMembers(),
+    requireWorkspace(),
+    getSuggestedJobId(id),
+    getEnabledRounds(),
   ]);
 
   if (!candidate) {
     notFound();
   }
-
-  const notes = rawNotes.map((n) => ({
-    id: n.id,
-    body: n.body,
-    createdAt: n.createdAt,
-    author: n.user.fullName ?? n.user.username ?? n.user.email.split("@")[0],
-  }));
 
   const fileUrl = `/api/candidates/${candidate.id}/file`;
   const facts = [
@@ -163,13 +184,41 @@ export default async function CandidateDetailPage({
         </div>
       </div>
 
+      {/* Interviews */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="size-4 text-primary" /> Interviews
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <InterviewsPanel
+              candidateId={candidate.id}
+              candidateName={candidate.fullName ?? candidate.filename}
+              interviews={interviews}
+              jobOptions={jobOptions}
+              orgMembers={orgMembers}
+              currentUserId={ws.user.id}
+              isAdmin={isAdmin(ws.role)}
+              defaultJobId={suggestedJobId ?? undefined}
+              rounds={availableRounds(enabledRounds)}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {scores.length > 0 ? (
           <MatchHistory scores={scores} />
         ) : (
           <div className="hidden lg:block" />
         )}
-        <NotesPanel candidateId={candidate.id} notes={notes} />
+        <NotesPanel
+          candidateId={candidate.id}
+          notes={notes}
+          orgMembers={orgMembers}
+        />
       </div>
 
       <div className="mt-6">

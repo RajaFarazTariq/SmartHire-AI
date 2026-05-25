@@ -26,7 +26,15 @@
       "Bash(kill %bqpc937oh)",
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.OwningProcess -Force } catch {} }; \"node stopped, port 3000 free\")",
       "PowerShell($conns = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { \"DEV RUNNING on 3000 \\(PID $\\($conns.OwningProcess -join ','\\)\\)\" } else { \"no dev server on 3000\" }; \"node procs: \" + \\(\\(Get-Process node -ErrorAction SilentlyContinue\\).Count\\))",
-      "Read(//c/Users/WORK/AppData/Local/Temp/light-shot-c416fb79b69144cca6b254456745464b/**)"
+      "Read(//c/Users/WORK/AppData/Local/Temp/light-shot-c416fb79b69144cca6b254456745464b/**)",
+      "PowerShell(npx dotenv -e .env.local -- prisma migrate deploy 2>&1 | Select-Object -Last 8; \"DEPLOY_EXIT=$LASTEXITCODE\")",
+      "PowerShell(npx dotenv -e .env.local -- prisma generate 2>&1 | Select-Object -Last 3; if \\($LASTEXITCODE -ne 0\\) { \"LOCKED — stopping node and retrying\"; Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Milliseconds 800; npx dotenv -e .env.local -- prisma generate 2>&1 | Select-Object -Last 3 }; \"GEN_EXIT=$LASTEXITCODE\")",
+      "PowerShell(\"cleaned\")",
+      "PowerShell(npx dotenv -e .env.local -- prisma migrate deploy 2>&1 | Select-Object -Last 4; \"DEPLOY=$LASTEXITCODE\"; Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Sleep -Milliseconds 600; npx dotenv -e .env.local -- prisma generate 2>&1 | Select-Object -Last 2; \"GEN=$LASTEXITCODE\")",
+      "PowerShell($c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { \"DEV RUNNING \\(PID $\\($c.OwningProcess -join ','\\)\\)\" } else { \"no dev server\" })"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\WORK\\AppData\\Local\\Temp"
     ]
   }
 }

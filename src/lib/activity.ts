@@ -6,7 +6,8 @@ export type ActivityType =
   | "job.deleted"
   | "candidate.uploaded"
   | "candidate.stage_changed"
-  | "candidates.scored";
+  | "candidates.scored"
+  | "interview.scheduled";
 
 /**
  * Records an activity-feed / audit entry. Best-effort: never throws, so it

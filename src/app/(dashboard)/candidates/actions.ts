@@ -5,9 +5,17 @@ import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
 import { processCandidate } from "@/lib/extraction";
 import { logActivity } from "@/lib/activity";
-import { notifyStageChange } from "@/lib/notify";
+import { notifyStageChange, createNotification } from "@/lib/notify";
 import { isPipelineStage } from "@/lib/pipeline";
 import { rateLimit } from "@/lib/rate-limit";
+
+export type NoteListItem = {
+  id: string;
+  body: string;
+  createdAt: Date;
+  author: string;
+  authorId: string;
+};
 
 // Fields needed by the candidates list view — deliberately excludes the large
 // rawText / fileUrl columns to keep the query and payload lean.
@@ -175,9 +183,34 @@ export async function getCandidateNotes(candidateId: string) {
   });
 }
 
+/** Lean, serializable notes list for near-real-time polling on the client. */
+export async function listCandidateNotes(
+  candidateId: string,
+): Promise<NoteListItem[]> {
+  const { orgId } = await requireWorkspace();
+  const candidate = await prisma.candidate.findFirst({
+    where: { id: candidateId, orgId },
+    select: { id: true },
+  });
+  if (!candidate) return [];
+  const notes = await prisma.note.findMany({
+    where: { candidateId },
+    orderBy: { createdAt: "desc" },
+    include: { user: true },
+  });
+  return notes.map((n) => ({
+    id: n.id,
+    body: n.body,
+    createdAt: n.createdAt,
+    author: n.user.fullName ?? n.user.username ?? n.user.email.split("@")[0],
+    authorId: n.userId,
+  }));
+}
+
 export async function addNoteAction(
   candidateId: string,
   body: string,
+  mentionIds: string[] = [],
 ): Promise<{ ok: boolean; error?: string }> {
   const { user, orgId } = await requireWorkspace();
 
@@ -195,6 +228,23 @@ export async function addNoteAction(
   await prisma.note.create({
     data: { candidateId, userId: user.id, body: trimmed },
   });
+
+  // Notify mentioned teammates (never notify yourself).
+  const actor = user.fullName ?? user.username ?? user.email.split("@")[0];
+  const candidateName = candidate.fullName ?? candidate.filename;
+  await Promise.all(
+    [...new Set(mentionIds)]
+      .filter((id) => id && id !== user.id)
+      .map((id) =>
+        createNotification({
+          userId: id,
+          type: "note.mention",
+          title: `${actor} mentioned you`,
+          body: `${actor} mentioned you in a note on ${candidateName}.`,
+          link: `/candidates/${candidateId}`,
+        }),
+      ),
+  );
 
   revalidatePath(`/candidates/${candidateId}`);
   return { ok: true };

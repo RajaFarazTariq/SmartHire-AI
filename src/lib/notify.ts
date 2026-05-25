@@ -42,3 +42,27 @@ export async function notifyStageChange(candidateId: string, stage: string) {
     console.error("notifyStageChange failed:", err);
   }
 }
+
+/** Notifies the applicant behind a candidate that an interview was scheduled. */
+export async function notifyInterviewScheduled(
+  candidateId: string,
+  info: { type: string; scheduledAt: Date },
+) {
+  try {
+    const app = await prisma.application.findUnique({
+      where: { candidateId },
+      include: { job: { select: { title: true } } },
+    });
+    if (!app) return;
+
+    await createNotification({
+      userId: app.applicantId,
+      type: "interview.scheduled",
+      title: `${info.type} interview scheduled`,
+      body: `Your ${info.type} interview for "${app.job.title}" is set for ${info.scheduledAt.toLocaleString()}.`,
+      link: `/portal/applications/${app.id}`,
+    });
+  } catch (err) {
+    console.error("notifyInterviewScheduled failed:", err);
+  }
+}

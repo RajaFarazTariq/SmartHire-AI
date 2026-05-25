@@ -67,7 +67,8 @@
       "PowerShell(npm install \"@clerk/nextjs@^5\" 2>&1)",
       "PowerShell(node -e \"console.log\\('clerk', require\\('c:/Projects/SmartHire-AI/node_modules/@clerk/nextjs/package.json'\\).version\\)\")",
       "PowerShell(\"latest \\(v6\\): \" + \\(npm view @clerk/nextjs version\\); \"latest 5.x: \" + \\(npm view \"@clerk/nextjs@5\" version\\); \"latest 6.x: \" + \\(npm view \"@clerk/nextjs@6\" version\\))",
-      "PowerShell(npm install \"@clerk/nextjs@6\" 2>&1)"
+      "PowerShell(npm install \"@clerk/nextjs@6\" 2>&1)",
+      "PowerShell(node ai_probe.mjs)"
     ]
   }
 }

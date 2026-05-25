@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
-import { embedText, generateMatchSummary } from "./gemini";
+import { embedText } from "./gemini";
+import { generateMatchSummary } from "./ai/tasks";
 import { queryByVector } from "./pinecone";
 
 const WEIGHT_SEMANTIC = 0.4;

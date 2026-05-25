@@ -45,6 +45,7 @@ model Job {
   user         User          @relation(fields: [userId], references: [id])
   scores       Score[]
   applications Application[]
+  interviews   Interview[]
 
   @@index([userId])
   @@index([orgId])
@@ -79,6 +80,7 @@ model Candidate {
   scores      Score[]
   notes       Note[]
   application Application?
+  interviews  Interview[]
 
   @@index([userId])
   @@index([orgId])
@@ -179,6 +181,66 @@ model CandidateProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("candidate_profiles")
+}
+
+// A scheduled interview between a candidate and a panel of interviewers.
+model Interview {
+  id             String   @id @default(cuid())
+  orgId          String
+  jobId          String
+  candidateId    String
+  scheduledAt    DateTime
+  durationMins   Int      @default(45)
+  type           String   @default("Phone Screen") // Phone Screen | Technical | Behavioral | System Design | Final
+  meetingLink    String?
+  location       String?
+  status         String   @default("Scheduled") // Scheduled | Completed | Cancelled | No-show
+  notes          String?  @db.Text
+  interviewerIds String[] // Clerk userIds of the panel
+  aiQuestions    Json? // [{ category, questions: string[] }]
+  createdById    String // Clerk userId of the scheduler
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  job       Job                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate Candidate           @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  feedback  InterviewFeedback[]
+
+  @@index([orgId, scheduledAt])
+  @@index([candidateId])
+  @@index([jobId])
+  @@map("interviews")
+}
+
+// A single interviewer's scorecard for an interview.
+model InterviewFeedback {
+  id             String   @id @default(cuid())
+  interviewId    String
+  interviewerId  String // Clerk userId
+  rating         Int // 1-5
+  recommendation String // Strong Yes | Yes | No | Strong No
+  strengths      String?  @db.Text
+  concerns       String?  @db.Text
+  comments       String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+
+  @@unique([interviewId, interviewerId])
+  @@index([interviewId])
+  @@map("interview_feedback")
+}
+
+// Per-organization configuration (e.g. which optional interview rounds are on).
+model OrgSettings {
+  id            String   @id @default(cuid())
+  orgId         String   @unique
+  enabledRounds String[] // optional interview rounds the org has enabled
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  @@map("org_settings")
 }
 
 // In-app notifications (status changes, interview updates, system messages).
