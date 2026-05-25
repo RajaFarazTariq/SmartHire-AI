@@ -24,7 +24,8 @@
       "PowerShell($ready=$false; for \\($i=0; $i -lt 40; $i++\\) { try { Invoke-WebRequest -Uri \"http://localhost:3000/\" -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 5 -ErrorAction Stop | Out-Null; $ready=$true } catch { if \\($_.Exception.Response\\) { $ready=$true } }; if \\($ready\\) { \"READY after ${i}s\"; break }; Start-Sleep -Seconds 1 }; if \\(-not $ready\\) { \"NOT READY\" })",
       "Read(//c/Users/WORK/AppData/Local/Temp/portal-shot-634df1f62df24975a71dec9269436794/**)",
       "Bash(kill %bqpc937oh)",
-      "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.OwningProcess -Force } catch {} }; \"node stopped, port 3000 free\")"
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force; Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { try { Stop-Process -Id $_.OwningProcess -Force } catch {} }; \"node stopped, port 3000 free\")",
+      "PowerShell($conns = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($conns\\) { \"DEV RUNNING on 3000 \\(PID $\\($conns.OwningProcess -join ','\\)\\)\" } else { \"no dev server on 3000\" }; \"node procs: \" + \\(\\(Get-Process node -ErrorAction SilentlyContinue\\).Count\\))"
     ]
   }
 }

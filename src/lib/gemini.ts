@@ -20,6 +20,47 @@ const EMBEDDING_MODEL = "gemini-embedding-001";
 const MAX_EXTRACTION_CHARS = 30_000;
 const MAX_EMBEDDING_CHARS = 8_000;
 
+// Gemini occasionally returns transient errors (503 overloaded, 429 rate-limit,
+// 500, network blips). These clear on their own, so retry with exponential
+// backoff before surfacing the failure to the user.
+function isTransientError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes("503") ||
+    msg.includes("service unavailable") ||
+    msg.includes("overloaded") ||
+    msg.includes("high demand") ||
+    msg.includes("429") ||
+    msg.includes("rate limit") ||
+    msg.includes("quota") ||
+    msg.includes("500") ||
+    msg.includes("internal error") ||
+    msg.includes("fetch failed") ||
+    msg.includes("timeout") ||
+    msg.includes("etimedout") ||
+    msg.includes("econnreset")
+  );
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  baseDelayMs = 600,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt === retries || !isTransientError(err)) break;
+      const delay = baseDelayMs * 2 ** attempt + Math.random() * 250;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 export async function extractResumeData(resumeText: string): Promise<unknown> {
   const model = genAI.getGenerativeModel({
     model: EXTRACTION_MODEL,
@@ -34,7 +75,7 @@ export async function extractResumeData(resumeText: string): Promise<unknown> {
     resumeText.slice(0, MAX_EXTRACTION_CHARS),
   );
 
-  const result = await model.generateContent(prompt);
+  const result = await withRetry(() => model.generateContent(prompt));
   const text = result.response.text();
 
   try {
@@ -73,7 +114,7 @@ export async function generateMatchSummary(input: {
     .replace("{matchedSkills}", input.matchedSkills.join(", ") || "none")
     .replace("{missingSkills}", input.missingSkills.join(", ") || "none");
 
-  const result = await model.generateContent(prompt);
+  const result = await withRetry(() => model.generateContent(prompt));
   const parsed = matchSummarySchema.parse(JSON.parse(result.response.text()));
   return JSON.stringify(parsed);
 }
@@ -89,6 +130,6 @@ export async function embedText(text: string): Promise<number[]> {
     },
     outputDimensionality: EMBEDDING_DIMENSION,
   };
-  const result = await model.embedContent(request);
+  const result = await withRetry(() => model.embedContent(request));
   return result.embedding.values;
 }

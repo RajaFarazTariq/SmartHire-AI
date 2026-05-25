@@ -11,6 +11,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+import { CARD_HOVER, CARD_HOVER_BASE, type CardAccent } from "@/lib/card-accents";
 import { Card, CardContent } from "@/components/ui/card";
 
 export function KpiCards({
@@ -33,13 +35,14 @@ export function KpiCards({
     value: string;
     icon: LucideIcon;
     tint: string;
+    accent: CardAccent;
   }[] = [
-    { label: "Jobs", value: String(jobs), icon: Briefcase, tint: "bg-blue-500/10 text-blue-600" },
-    { label: "Candidates", value: String(candidates), icon: Users, tint: "bg-violet-500/10 text-violet-600" },
-    { label: "Avg match", value: `${avgMatch}%`, icon: Gauge, tint: "bg-primary/10 text-primary" },
-    { label: "Hired", value: String(hired), icon: Award, tint: "bg-emerald-500/10 text-emerald-600" },
-    { label: "Processing", value: String(processing), icon: Clock, tint: "bg-amber-500/10 text-amber-600" },
-    { label: "Ready", value: String(ready), icon: CheckCircle2, tint: "bg-teal-500/10 text-teal-600" },
+    { label: "Jobs", value: String(jobs), icon: Briefcase, tint: "bg-blue-500/10 text-blue-600", accent: "blue" },
+    { label: "Candidates", value: String(candidates), icon: Users, tint: "bg-violet-500/10 text-violet-600", accent: "violet" },
+    { label: "Avg match", value: `${avgMatch}%`, icon: Gauge, tint: "bg-primary/10 text-primary", accent: "primary" },
+    { label: "Hired", value: String(hired), icon: Award, tint: "bg-emerald-500/10 text-emerald-600", accent: "emerald" },
+    { label: "Processing", value: String(processing), icon: Clock, tint: "bg-amber-500/10 text-amber-600", accent: "amber" },
+    { label: "Ready", value: String(ready), icon: CheckCircle2, tint: "bg-teal-500/10 text-teal-600", accent: "teal" },
   ];
 
   return (
@@ -53,7 +56,13 @@ export function KpiCards({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: i * 0.05, ease: "easeOut" }}
           >
-            <Card className="gap-0 py-4 transition-shadow hover:shadow-md">
+            <Card
+              className={cn(
+                "gap-0 py-4",
+                CARD_HOVER_BASE,
+                CARD_HOVER[c.accent],
+              )}
+            >
               <CardContent className="flex items-center justify-between gap-2 px-4">
                 <div className="min-w-0">
                   <p className="truncate text-xs text-muted-foreground">

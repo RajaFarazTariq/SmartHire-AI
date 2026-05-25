@@ -18,6 +18,7 @@ import { STAGE_DESCRIPTIONS, isPipelineStage } from "@/lib/pipeline";
 import { PortalHeader } from "@/components/portal/portal-header";
 import { StatusBadge } from "@/components/portal/status-badge";
 import { ApplicationTimeline } from "@/components/portal/application-timeline";
+import { ResumeViewer } from "@/components/resume-viewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -162,6 +163,16 @@ export default async function ApplicationDetailPage({
             </Card>
           )}
         </div>
+      </div>
+
+      {/* Full resume preview */}
+      <div className="mt-6">
+        <ResumeViewer
+          fileType={candidate.fileType}
+          fileName={candidate.filename}
+          fileUrl={`/api/portal/resume/${candidate.id}`}
+          height={560}
+        />
       </div>
     </div>
   );

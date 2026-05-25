@@ -1,6 +1,8 @@
 import { extractPdfText } from "./pdf";
 import { extractDocxText } from "./docx";
 
+export { renderDocxHtml } from "./docx";
+
 export type ResumeFileType = "pdf" | "docx";
 
 export function detectFileType(filename: string, mimeType: string): ResumeFileType | null {

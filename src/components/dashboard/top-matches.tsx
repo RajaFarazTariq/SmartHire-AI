@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Score, Candidate, Job } from "@prisma/client";
-import { Trophy, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -10,56 +12,64 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { ScoreRing } from "./score-ring";
 
 type TopMatch = Score & { candidate: Candidate; job: Job };
 
-function scoreTone(n: number) {
-  if (n >= 75) return "bg-emerald-500/10 text-emerald-600";
-  if (n >= 50) return "bg-amber-500/10 text-amber-600";
-  return "bg-rose-500/10 text-rose-600";
-}
-
 export function TopMatches({ matches }: { matches: TopMatch[] }) {
   return (
-    <Card>
+    <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.amber)}>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Trophy className="size-4 text-amber-500" />
-          <CardTitle>Top matches</CardTitle>
+          <span className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
+            <Sparkles className="size-4" />
+          </span>
+          <CardTitle>Top AI matches</CardTitle>
         </div>
         <CardDescription>
           Your highest-scoring candidate–job matches
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ul className="divide-y">
-          {matches.map((m) => {
+        <ul className="space-y-1">
+          {matches.map((m, i) => {
             const overall = Math.round(m.overallScore);
             return (
               <li key={m.id}>
                 <Link
                   href={`/candidates/${m.candidateId}`}
-                  className="flex items-center gap-4 py-3 transition-colors hover:text-primary"
+                  className="group flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-accent"
                 >
-                  <span
-                    className={cn(
-                      "flex size-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold tabular-nums",
-                      scoreTone(overall),
-                    )}
-                  >
-                    {overall}
+                  <span className="w-4 shrink-0 text-center text-sm font-semibold tabular-nums text-muted-foreground">
+                    {i + 1}
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">
+                  <ScoreRing value={overall} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium transition-colors group-hover:text-primary">
                       {m.candidate.fullName ?? m.candidate.filename}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
                       for {m.job.title}
-                      {m.matchedSkills.length > 0 &&
-                        ` · ${m.matchedSkills.slice(0, 3).join(", ")}`}
-                    </span>
-                  </span>
-                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                      {m.matchedSkills.slice(0, 3).map((s) => (
+                        <Badge
+                          key={s}
+                          variant="secondary"
+                          className="rounded-md px-1.5 py-0 text-[10px] font-normal"
+                        >
+                          {s}
+                        </Badge>
+                      ))}
+                      {m.missingSkills.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {m.missingSkills.length} gap
+                          {m.missingSkills.length === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                 </Link>
               </li>
             );
