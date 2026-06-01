@@ -10,6 +10,9 @@ import {
   FileCheck2,
   CalendarClock,
   AtSign,
+  UserPlus,
+  UserCheck,
+  UserX,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,6 +27,9 @@ import {
 function iconFor(type: string) {
   if (type === "application.status") return GitBranch;
   if (type === "application.submitted") return FileCheck2;
+  if (type === "org.request") return UserPlus;
+  if (type === "org.request.approved") return UserCheck;
+  if (type === "org.request.rejected") return UserX;
   if (type === "interview.scheduled") return CalendarClock;
   if (type === "note.mention") return AtSign;
   return Bell;
