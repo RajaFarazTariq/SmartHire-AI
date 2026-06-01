@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { OrganizationProfile } from "@clerk/nextjs";
 import { clerkClient } from "@clerk/nextjs/server";
 import {
   UserPlus,
@@ -8,7 +7,6 @@ import {
   Briefcase,
   FileText,
   ShieldCheck,
-  Activity as ActivityIcon,
   Building2,
 } from "lucide-react";
 
@@ -17,16 +15,14 @@ import { requireWorkspace } from "@/lib/org";
 import { isAdmin, roleLabel } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { MembersManager } from "./members-manager";
+import {
+  getOrgMembersDetailed,
+  getOrgPendingInvitations,
+} from "./member-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -50,19 +46,16 @@ export default async function OrganizationPage() {
     console.error("Failed to load org:", err);
   }
 
-  // Counts + recent activity from our DB (all org-scoped).
-  const [jobsCount, candidatesCount, pendingRequests, recentActivity] =
+  // Counts + members data — all org-scoped.
+  const [jobsCount, candidatesCount, pendingRequests, members, invitations] =
     await Promise.all([
       prisma.job.count({ where: { orgId } }),
       prisma.candidate.count({ where: { orgId } }),
       prisma.organizationRequest.count({
         where: { orgId, status: "pending" },
       }),
-      prisma.activityLog.findMany({
-        where: { orgId },
-        orderBy: { createdAt: "desc" },
-        take: 8,
-      }),
+      getOrgMembersDetailed(),
+      getOrgPendingInvitations(),
     ]);
 
   const stats = [
@@ -98,7 +91,7 @@ export default async function OrganizationPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Organization"
         description="Workspace overview, members, and access controls."
@@ -141,7 +134,7 @@ export default async function OrganizationPage() {
         </CardContent>
       </Card>
 
-      {/* Stats — Pending requests card hides for non-admins */}
+      {/* Stats */}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => {
           if (s.adminOnly && !admin) return null;
@@ -176,89 +169,46 @@ export default async function OrganizationPage() {
         })}
       </div>
 
-      {/* Two-column: admin actions + activity */}
-      <div className="mb-5 grid gap-5 lg:grid-cols-2">
-        {admin && (
-          <Link href="/organization/requests" className="block">
-            <Card
-              className={cn(
-                "group gap-0 h-full",
-                CARD_HOVER_BASE,
-                CARD_HOVER.primary,
-              )}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <UserPlus className="size-4" />
-                  </span>
+      {/* Admin: Join requests entry */}
+      {admin && (
+        <Link href="/organization/requests" className="mb-5 block">
+          <Card
+            className={cn(
+              "group gap-0 transition-all duration-200",
+              CARD_HOVER_BASE,
+              CARD_HOVER.primary,
+            )}
+          >
+            <CardContent className="flex items-center gap-3 px-5 py-4">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <UserPlus className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-sm font-medium">
                   Join requests
                   {pendingRequests > 0 && (
                     <Badge className="border-0 bg-amber-500/15 text-amber-600 dark:text-amber-400">
                       {pendingRequests} pending
                     </Badge>
                   )}
-                </CardTitle>
-                <CardDescription>
+                </p>
+                <p className="text-xs text-muted-foreground">
                   Review recruiters asking to join this organization.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex items-center justify-end pt-0">
-                <span className="flex items-center gap-1 text-sm font-medium text-primary transition-transform group-hover:translate-x-0.5">
-                  Review <ArrowRight className="size-4" />
-                </span>
-              </CardContent>
-            </Card>
-          </Link>
-        )}
+                </p>
+              </div>
+              <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
-        <Card
-          className={cn(
-            admin ? "" : "lg:col-span-2",
-            CARD_HOVER_BASE,
-            CARD_HOVER.amber,
-          )}
-        >
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-                <ActivityIcon className="size-4" />
-              </span>
-              Recent activity
-            </CardTitle>
-            <CardDescription>
-              Latest actions across your workspace.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ActivityFeed items={recentActivity} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Clerk's organization manager — has its own role-aware RBAC built in
-          (admins see manage/delete; non-admins see view-only). */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Members &amp; access</CardTitle>
-          <CardDescription>
-            {admin
-              ? "Invite teammates, change roles, and manage organization settings."
-              : "View your teammates. Role and membership changes are managed by admins."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <OrganizationProfile
-            routing="hash"
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                cardBox: "w-full max-w-none shadow-none border border-border",
-              },
-            }}
-          />
-        </CardContent>
-      </Card>
+      {/* Members manager — sidebar tabs + advanced members table */}
+      <MembersManager
+        members={members}
+        invitations={invitations}
+        currentUserId={user.id}
+        isAdmin={admin}
+      />
     </div>
   );
 }
