@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getOrCreateDbUser } from "@/lib/auth";
 import { markAsCandidate, CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
 import { getActiveOrgId, hasOrgMembership } from "@/lib/access";
+import { hasPendingJoinRequest } from "@/app/onboarding/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,10 @@ export default async function ContinuePage() {
   // Belongs to an org but none active in this session → send them to activate it
   // (NOT the candidate portal). This is the case that caused recruiter misroutes.
   if (await hasOrgMembership(user.id)) redirect("/onboarding");
+
+  // A request to join an org is awaiting an admin's decision → show the
+  // waiting screen instead of bouncing them to candidate routing.
+  if (await hasPendingJoinRequest(user.id)) redirect("/onboarding/pending");
 
   // No organization at all → candidate side. Honour the role-chooser cookie.
   if (intent === "candidate" && user.accountType !== CANDIDATE_ACCOUNT_TYPE) {

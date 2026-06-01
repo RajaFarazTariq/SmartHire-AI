@@ -243,6 +243,28 @@ model OrgSettings {
   @@map("org_settings")
 }
 
+// A recruiter's request to join an existing Clerk organization. Created when
+// they pick an org during onboarding; awaits an org admin's decision.
+model OrganizationRequest {
+  id             String    @id @default(cuid())
+  orgId          String // target Clerk org id
+  orgName        String // snapshot at request time
+  requesterId    String // Clerk userId of the person asking to join
+  requesterEmail String
+  requesterName  String?
+  message        String?   @db.Text
+  status         String    @default("pending") // pending | approved | rejected
+  decidedById    String? // admin's Clerk userId
+  decidedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([orgId, requesterId])
+  @@index([orgId, status])
+  @@index([requesterId, status])
+  @@map("organization_requests")
+}
+
 // In-app notifications (status changes, interview updates, system messages).
 model Notification {
   id        String   @id @default(cuid())
