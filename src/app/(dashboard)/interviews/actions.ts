@@ -9,6 +9,7 @@ import { requireWorkspace } from "@/lib/org";
 import { canDelete } from "@/lib/rbac";
 import {
   assertCanConduct,
+  canConductInterview,
   validatePanelComposition,
 } from "@/lib/interview-access";
 import { logActivity } from "@/lib/activity";
@@ -106,8 +107,8 @@ export async function getJobOptions(): Promise<{ id: string; title: string }[]> 
 }
 
 export async function getCandidateInterviews(candidateId: string) {
-  const { orgId } = await requireWorkspace();
-  return prisma.interview.findMany({
+  const { user, orgId } = await requireWorkspace();
+  const rows = await prisma.interview.findMany({
     where: { candidateId, orgId },
     orderBy: { scheduledAt: "desc" },
     include: {
@@ -115,6 +116,14 @@ export async function getCandidateInterviews(candidateId: string) {
       job: { select: { id: true, title: true } },
     },
   });
+  // Defense in depth: strip conduct-only fields (meeting URL, internal notes)
+  // for callers not on the panel. UI already hides the Join button, but this
+  // ensures the URL never reaches the client payload.
+  return rows.map((iv) =>
+    canConductInterview(iv, user.id)
+      ? iv
+      : { ...iv, meetingLink: null, notes: null },
+  );
 }
 
 /**
@@ -136,8 +145,8 @@ export async function getCandidatesAwaitingScheduling() {
 }
 
 export async function getOrgInterviews() {
-  const { orgId } = await requireWorkspace();
-  return prisma.interview.findMany({
+  const { user, orgId } = await requireWorkspace();
+  const rows = await prisma.interview.findMany({
     where: { orgId },
     orderBy: { scheduledAt: "desc" },
     include: {
@@ -146,6 +155,11 @@ export async function getOrgInterviews() {
       feedback: { select: { id: true } },
     },
   });
+  return rows.map((iv) =>
+    canConductInterview(iv, user.id)
+      ? iv
+      : { ...iv, meetingLink: null, notes: null },
+  );
 }
 
 export type ScheduleInterviewInput = {
