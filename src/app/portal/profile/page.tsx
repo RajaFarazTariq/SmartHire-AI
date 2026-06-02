@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { Bell, ChevronRight } from "lucide-react";
+
 import { getCandidateContext } from "@/lib/candidate";
 import type { ExperienceEntry, EducationEntry } from "@/lib/candidate";
 import { PortalHeader } from "@/components/portal/portal-header";
@@ -44,6 +47,24 @@ export default async function ProfilePage() {
           type: profile?.resumeType ?? null,
         }}
       />
+
+      <Link
+        href="/portal/preferences"
+        className="mt-6 flex items-center justify-between rounded-lg border bg-card p-4 text-sm transition-colors hover:bg-accent"
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Bell className="size-4" />
+          </span>
+          <span>
+            <span className="block font-medium">Notification preferences</span>
+            <span className="block text-xs text-muted-foreground">
+              Choose what we email you about.
+            </span>
+          </span>
+        </span>
+        <ChevronRight className="size-4 text-muted-foreground" />
+      </Link>
     </div>
   );
 }

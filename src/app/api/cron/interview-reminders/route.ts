@@ -14,6 +14,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const auth = req.headers.get("authorization");
   const secret = process.env.CRON_SECRET;
+  // In production the secret is mandatory; locally we allow unauthenticated
+  // invocation so devs can curl the endpoint without setting up the secret.
+  if (process.env.NODE_ENV === "production" && !secret) {
+    return NextResponse.json(
+      { error: "CRON_SECRET not configured" },
+      { status: 500 },
+    );
+  }
   if (secret && auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -39,18 +47,32 @@ export async function GET(req: Request) {
   });
 
   let sent = 0;
+  const failures: { id: string; error: string }[] = [];
   for (const iv of due) {
-    await notifyInterviewReminder(iv.candidateId, {
-      type: iv.type,
-      scheduledAt: iv.scheduledAt,
-      meetingLink: iv.meetingLink,
-    });
-    await prisma.interview.update({
-      where: { id: iv.id },
-      data: { reminderSentAt: now },
-    });
-    sent += 1;
+    try {
+      await notifyInterviewReminder(iv.candidateId, {
+        type: iv.type,
+        scheduledAt: iv.scheduledAt,
+        meetingLink: iv.meetingLink,
+      });
+      await prisma.interview.update({
+        where: { id: iv.id },
+        data: { reminderSentAt: now },
+      });
+      sent += 1;
+    } catch (err) {
+      // One bad interview must not abort the batch.
+      const msg = err instanceof Error ? err.message : "unknown";
+      console.error(`interview-reminders ${iv.id} failed:`, msg);
+      failures.push({ id: iv.id, error: msg });
+    }
   }
 
-  return NextResponse.json({ ok: true, considered: due.length, sent });
+  return NextResponse.json({
+    ok: true,
+    considered: due.length,
+    sent,
+    failed: failures.length,
+    failures,
+  });
 }

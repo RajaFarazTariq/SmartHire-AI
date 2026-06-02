@@ -25,6 +25,7 @@ model User {
   applications  Application[]      @relation("UserApplications")
   profile       CandidateProfile?
   notifications Notification[]
+  preferences   NotificationPreference?
 
   @@map("users")
 }
@@ -268,18 +269,36 @@ model OrganizationRequest {
 
 // In-app notifications (status changes, interview updates, system messages).
 model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  type      String // application.status | application.submitted | system
-  title     String
-  body      String?
-  link      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  type       String // application.status | application.submitted | system
+  title      String
+  body       String?
+  link       String?
+  read       Boolean   @default(false)
+  emailedAt  DateTime? // set when the email side-effect succeeded
+  emailError String? // populated when an email attempt failed (skipped, rate-limited, etc.)
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
   @@index([userId, createdAt])
   @@map("notifications")
+}
+
+// Per-user email opt-out + per-type granular preferences. Default = opted-in;
+// row is lazily created on first notification or first visit to /portal/preferences.
+model NotificationPreference {
+  userId           String   @id
+  emailEnabled     Boolean  @default(true)
+  // Per-type opt-out map, e.g. { "application.status": false }. Missing keys = on.
+  types            Json?
+  unsubscribeToken String   @unique @default(cuid())
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }

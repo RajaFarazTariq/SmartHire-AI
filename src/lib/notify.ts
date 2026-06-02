@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { sendNotificationEmail } from "./email/send";
 
 export type NotificationInput = {
   userId: string;
@@ -8,10 +9,15 @@ export type NotificationInput = {
   link?: string;
 };
 
-/** Best-effort: a failed notification must never break the triggering action. */
+/**
+ * Best-effort: a failed notification must never break the triggering action.
+ * The email side-effect is awaited but isolated by sendNotificationEmail's
+ * own try/catch — it never throws, and is a no-op when RESEND_API_KEY is unset.
+ */
 export async function createNotification(input: NotificationInput) {
   try {
-    await prisma.notification.create({ data: input });
+    const row = await prisma.notification.create({ data: input });
+    await sendNotificationEmail(row);
   } catch (err) {
     console.error("createNotification failed:", err);
   }
