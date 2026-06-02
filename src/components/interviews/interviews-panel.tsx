@@ -396,10 +396,15 @@ function InterviewCard({
   const [genPending, setGenPending] = useState(false);
   const [summary, setSummary] = useState<PanelSummaryData | null>(null);
   const [summarizing, setSummarizing] = useState(false);
+  const [questionsOpen, setQuestionsOpen] = useState(false);
 
   const questions = (
     Array.isArray(interview.aiQuestions) ? interview.aiQuestions : []
   ) as unknown as AIQuestionGroup[];
+  const totalQuestions = questions.reduce(
+    (sum, g) => sum + (g.questions?.length ?? 0),
+    0,
+  );
   const myFeedback = interview.feedback.find((f) => f.interviewerId === currentUserId);
   // Conduct gate — keep in sync with src/lib/interview-access.ts canConductInterview.
   // Legacy interviews with empty panels fall back to the original scheduler.
@@ -539,10 +544,30 @@ function InterviewCard({
 
       {/* AI questions */}
       <div className="mt-3 border-t pt-3">
-        <div className="flex items-center justify-between">
-          <p className="flex items-center gap-1.5 text-xs font-medium">
-            <Sparkles className="size-3.5 text-primary" /> AI interview questions
-          </p>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => questions.length > 0 && setQuestionsOpen((v) => !v)}
+            disabled={questions.length === 0}
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-foreground disabled:cursor-default"
+            aria-expanded={questionsOpen}
+          >
+            <Sparkles className="size-3.5 text-primary" />
+            AI interview questions
+            {questions.length > 0 && (
+              <>
+                <span className="text-muted-foreground">
+                  ({totalQuestions})
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "size-3.5 text-muted-foreground transition-transform",
+                    questionsOpen && "rotate-180",
+                  )}
+                />
+              </>
+            )}
+          </button>
           {canConduct && (
             <Button
               size="sm"
@@ -561,7 +586,7 @@ function InterviewCard({
             </Button>
           )}
         </div>
-        {questions.length > 0 && (
+        {questions.length > 0 && questionsOpen && (
           <div className="mt-2 space-y-2">
             {questions.map((g, i) => (
               <div key={i}>
