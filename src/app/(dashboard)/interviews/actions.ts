@@ -7,6 +7,10 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
 import { canDelete } from "@/lib/rbac";
+import {
+  assertCanConduct,
+  validatePanelComposition,
+} from "@/lib/interview-access";
 import { logActivity } from "@/lib/activity";
 import {
   notifyInterviewScheduled,
@@ -61,7 +65,7 @@ export async function getSuggestedJobId(
   return candidate?.application?.jobId ?? null;
 }
 
-export type OrgMember = { id: string; name: string; email: string };
+export type OrgMember = { id: string; name: string; email: string; role: string };
 
 export async function getOrgMembers(): Promise<OrgMember[]> {
   const { orgId } = await requireWorkspace();
@@ -69,7 +73,7 @@ export async function getOrgMembers(): Promise<OrgMember[]> {
     const client = await clerkClient();
     const res = await client.organizations.getOrganizationMembershipList({
       organizationId: orgId,
-      limit: 100,
+      limit: 200,
     });
     return res.data
       .map((m) => {
@@ -78,7 +82,12 @@ export async function getOrgMembers(): Promise<OrgMember[]> {
           [u?.firstName, u?.lastName].filter(Boolean).join(" ") ||
           u?.identifier ||
           "Member";
-        return { id: u?.userId ?? "", name, email: u?.identifier ?? "" };
+        return {
+          id: u?.userId ?? "",
+          name,
+          email: u?.identifier ?? "",
+          role: m.role,
+        };
       })
       .filter((m) => m.id);
   } catch (err) {
@@ -154,7 +163,7 @@ export type ScheduleInterviewInput = {
 export async function scheduleInterviewAction(
   input: ScheduleInterviewInput,
 ): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const { user, orgId } = await requireWorkspace();
+  const { user, orgId, role } = await requireWorkspace();
 
   if (!isInterviewType(input.type)) {
     return { ok: false, error: "Invalid interview type" };
@@ -163,6 +172,16 @@ export async function scheduleInterviewAction(
   if (Number.isNaN(when.getTime())) {
     return { ok: false, error: "Pick a valid date and time" };
   }
+
+  // Validate panel: members of this org only; no Admin unless the caller is
+  // an Admin self-assigning the interview to themselves alone.
+  const panel = await validatePanelComposition({
+    orgId,
+    callerId: user.id,
+    callerRole: role,
+    interviewerIds: input.interviewerIds,
+  });
+  if (!panel.ok) return { ok: false, error: panel.error };
 
   const [candidate, job] = await Promise.all([
     prisma.candidate.findFirst({ where: { id: input.candidateId, orgId } }),
@@ -182,7 +201,7 @@ export async function scheduleInterviewAction(
       meetingLink: input.meetingLink.trim() || null,
       location: input.location.trim() || null,
       notes: input.notes.trim() || null,
-      interviewerIds: input.interviewerIds,
+      interviewerIds: panel.ids,
       createdById: user.id,
     },
   });
@@ -219,15 +238,23 @@ export type UpdateInterviewInput = {
   notes: string;
 };
 
-/** Edit a scheduled interview. Any workspace member (admin/manager/recruiter). */
+/**
+ * Edit a scheduled interview. Only conductors (= members of interview.interviewerIds,
+ * with createdById fallback for legacy rows). Panel composition validated like schedule.
+ */
 export async function updateInterviewAction(
   id: string,
   input: UpdateInterviewInput,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { user, orgId } = await requireWorkspace();
+  const { user, orgId, role } = await requireWorkspace();
 
   const interview = await prisma.interview.findFirst({ where: { id, orgId } });
   if (!interview) return { ok: false, error: "Interview not found" };
+
+  // Conduct gate: only assigned interviewers (or the original scheduler on
+  // legacy rows with empty panels) can edit.
+  const conduct = assertCanConduct(interview, user.id);
+  if (!conduct.ok) return conduct;
 
   if (!isInterviewType(input.type)) {
     return { ok: false, error: "Invalid interview type" };
@@ -236,6 +263,14 @@ export async function updateInterviewAction(
   if (Number.isNaN(when.getTime())) {
     return { ok: false, error: "Pick a valid date and time" };
   }
+
+  const panel = await validatePanelComposition({
+    orgId,
+    callerId: user.id,
+    callerRole: role,
+    interviewerIds: input.interviewerIds,
+  });
+  if (!panel.ok) return { ok: false, error: panel.error };
 
   const oldLink = interview.meetingLink ?? "";
   const newLink = input.meetingLink.trim() || null;
@@ -252,7 +287,7 @@ export async function updateInterviewAction(
       meetingLink: newLink,
       location: input.location.trim() || null,
       notes: input.notes.trim() || null,
-      interviewerIds: input.interviewerIds,
+      interviewerIds: panel.ids,
       ...(rescheduled ? { reminderSentAt: null } : {}),
     },
   });
@@ -282,11 +317,14 @@ export async function updateInterviewStatusAction(
   id: string,
   status: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { orgId } = await requireWorkspace();
+  const { user, orgId } = await requireWorkspace();
   if (!isInterviewStatus(status)) return { ok: false, error: "Invalid status" };
 
   const interview = await prisma.interview.findFirst({ where: { id, orgId } });
   if (!interview) return { ok: false, error: "Interview not found" };
+
+  const conduct = assertCanConduct(interview, user.id);
+  if (!conduct.ok) return conduct;
 
   await prisma.interview.update({ where: { id }, data: { status } });
   revalidatePath(`/candidates/${interview.candidateId}`);
@@ -328,6 +366,9 @@ export async function generateQuestionsAction(
     },
   });
   if (!interview) return { ok: false, error: "Interview not found" };
+
+  const conduct = assertCanConduct(interview, user.id);
+  if (!conduct.ok) return conduct;
 
   // Skills the candidate is missing for this job (to probe in the interview).
   const candSkills = interview.candidate.extractedSkills.map((s) => s.toLowerCase());
@@ -382,6 +423,9 @@ export async function submitFeedbackAction(
   const interview = await prisma.interview.findFirst({ where: { id: interviewId, orgId } });
   if (!interview) return { ok: false, error: "Interview not found" };
 
+  const conduct = assertCanConduct(interview, user.id);
+  if (!conduct.ok) return conduct;
+
   await prisma.interviewFeedback.upsert({
     where: {
       interviewId_interviewerId: { interviewId, interviewerId: user.id },
@@ -428,6 +472,10 @@ export async function summarizePanelAction(
     },
   });
   if (!interview) return { ok: false, error: "Interview not found" };
+
+  const conduct = assertCanConduct(interview, user.id);
+  if (!conduct.ok) return conduct;
+
   if (interview.feedback.length === 0) {
     return { ok: false, error: "No feedback to summarize yet." };
   }

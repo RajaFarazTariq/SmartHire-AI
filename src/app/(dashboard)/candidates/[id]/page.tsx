@@ -200,6 +200,7 @@ export default async function CandidateDetailPage({
               jobOptions={jobOptions}
               orgMembers={orgMembers}
               currentUserId={ws.user.id}
+              currentUserRole={ws.role}
               isAdmin={isAdmin(ws.role)}
               defaultJobId={suggestedJobId ?? undefined}
               rounds={availableRounds(enabledRounds)}

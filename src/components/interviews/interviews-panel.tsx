@@ -80,6 +80,7 @@ export function InterviewsPanel({
   jobOptions,
   orgMembers,
   currentUserId,
+  currentUserRole,
   isAdmin,
   defaultJobId,
   rounds,
@@ -90,6 +91,7 @@ export function InterviewsPanel({
   jobOptions: { id: string; title: string }[];
   orgMembers: OrgMember[];
   currentUserId: string;
+  currentUserRole: string;
   isAdmin: boolean;
   defaultJobId?: string;
   rounds: InterviewType[];
@@ -109,6 +111,8 @@ export function InterviewsPanel({
           candidateName={candidateName}
           jobOptions={jobOptions}
           orgMembers={orgMembers}
+          currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
           defaultJobId={defaultJobId}
           rounds={rounds}
         />
@@ -122,9 +126,71 @@ export function InterviewsPanel({
           orgMembers={orgMembers}
           rounds={rounds}
           currentUserId={currentUserId}
+          currentUserRole={currentUserRole}
           isAdmin={isAdmin}
         />
       ))}
+    </div>
+  );
+}
+
+const ROLE_ADMIN_STR = "org:admin";
+
+function panelEligible(
+  members: OrgMember[],
+  currentUserId: string,
+  currentUserRole: string,
+): OrgMember[] {
+  // Admins may only schedule for themselves alone. Non-admin schedulers
+  // see everyone except admins. Admin schedulers see only themselves (so
+  // the panel checkbox naturally enforces the "solo" constraint).
+  if (currentUserRole === ROLE_ADMIN_STR) {
+    return members.filter((m) => m.id === currentUserId);
+  }
+  return members.filter((m) => m.role !== ROLE_ADMIN_STR);
+}
+
+function PanelPicker({
+  members,
+  selectedIds,
+  onToggle,
+  currentUserId,
+  currentUserRole,
+}: {
+  members: OrgMember[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+  currentUserId: string;
+  currentUserRole: string;
+}) {
+  const eligible = panelEligible(members, currentUserId, currentUserRole);
+  return (
+    <div className="space-y-1.5">
+      <Label>Panel</Label>
+      <p className="text-xs text-muted-foreground">
+        {currentUserRole === ROLE_ADMIN_STR
+          ? "As an Admin, you can only schedule interviews you'll conduct yourself."
+          : "Admins can't be added to interview panels."}
+      </p>
+      {eligible.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No eligible interviewers.</p>
+      ) : (
+        <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+          {eligible.map((m) => (
+            <label
+              key={m.id}
+              className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-accent"
+            >
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(m.id)}
+                onChange={() => onToggle(m.id)}
+              />
+              <span className="truncate">{m.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -134,6 +200,8 @@ function ScheduleSheet({
   candidateName,
   jobOptions,
   orgMembers,
+  currentUserId,
+  currentUserRole,
   defaultJobId,
   rounds,
 }: {
@@ -141,6 +209,8 @@ function ScheduleSheet({
   candidateName: string;
   jobOptions: { id: string; title: string }[];
   orgMembers: OrgMember[];
+  currentUserId: string;
+  currentUserRole: string;
   defaultJobId?: string;
   rounds: InterviewType[];
 }) {
@@ -272,30 +342,13 @@ function ScheduleSheet({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Panel</Label>
-            {orgMembers.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No team members found.
-              </p>
-            ) : (
-              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
-                {orgMembers.map((m) => (
-                  <label
-                    key={m.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={interviewerIds.includes(m.id)}
-                      onChange={() => toggleInterviewer(m.id)}
-                    />
-                    <span className="truncate">{m.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <PanelPicker
+            members={orgMembers}
+            selectedIds={interviewerIds}
+            onToggle={toggleInterviewer}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+          />
 
           <div className="space-y-1.5">
             <Label>Notes (optional)</Label>
@@ -327,6 +380,7 @@ function InterviewCard({
   orgMembers,
   rounds,
   currentUserId,
+  currentUserRole,
   isAdmin,
 }: {
   interview: Interview;
@@ -334,6 +388,7 @@ function InterviewCard({
   orgMembers: OrgMember[];
   rounds: InterviewType[];
   currentUserId: string;
+  currentUserRole: string;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -346,6 +401,12 @@ function InterviewCard({
     Array.isArray(interview.aiQuestions) ? interview.aiQuestions : []
   ) as unknown as AIQuestionGroup[];
   const myFeedback = interview.feedback.find((f) => f.interviewerId === currentUserId);
+  // Conduct gate — keep in sync with src/lib/interview-access.ts canConductInterview.
+  // Legacy interviews with empty panels fall back to the original scheduler.
+  const canConduct =
+    interview.interviewerIds.length > 0
+      ? interview.interviewerIds.includes(currentUserId)
+      : interview.createdById === currentUserId;
 
   function changeStatus(status: string) {
     startTransition(async () => {
@@ -408,23 +469,36 @@ function InterviewCard({
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <Select value={interview.status} onValueChange={changeStatus}>
-            <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {INTERVIEW_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <EditInterviewSheet
-            interview={interview}
-            orgMembers={orgMembers}
-            rounds={rounds}
-          />
+          {canConduct ? (
+            <Select value={interview.status} onValueChange={changeStatus}>
+              <SelectTrigger className="h-7 w-auto gap-1 px-2 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INTERVIEW_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span
+              className="rounded-md border bg-muted/40 px-2 py-1 text-xs text-muted-foreground"
+              title="View-only — you're not on this interview's panel."
+            >
+              View only
+            </span>
+          )}
+          {canConduct && (
+            <EditInterviewSheet
+              interview={interview}
+              orgMembers={orgMembers}
+              rounds={rounds}
+              currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
+            />
+          )}
           {isAdmin && (
             <button
               onClick={remove}
@@ -469,21 +543,23 @@ function InterviewCard({
           <p className="flex items-center gap-1.5 text-xs font-medium">
             <Sparkles className="size-3.5 text-primary" /> AI interview questions
           </p>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7"
-            onClick={generate}
-            disabled={genPending}
-          >
-            {genPending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : questions.length > 0 ? (
-              "Regenerate"
-            ) : (
-              "Generate"
-            )}
-          </Button>
+          {canConduct && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7"
+              onClick={generate}
+              disabled={genPending}
+            >
+              {genPending ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : questions.length > 0 ? (
+                "Regenerate"
+              ) : (
+                "Generate"
+              )}
+            </Button>
+          )}
         </div>
         {questions.length > 0 && (
           <div className="mt-2 space-y-2">
@@ -511,7 +587,7 @@ function InterviewCard({
           <p className="text-xs font-medium">
             Scorecards ({interview.feedback.length})
           </p>
-          {interview.feedback.length > 0 && (
+          {canConduct && interview.feedback.length > 0 && (
             <Button
               size="sm"
               variant="ghost"
@@ -565,7 +641,13 @@ function InterviewCard({
           ))}
         </div>
 
-        <FeedbackForm interviewId={interview.id} existing={myFeedback} />
+        {canConduct ? (
+          <FeedbackForm interviewId={interview.id} existing={myFeedback} />
+        ) : (
+          <p className="mt-3 rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+            You're not on this panel — viewing scorecards only.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -698,10 +780,14 @@ function EditInterviewSheet({
   interview,
   orgMembers,
   rounds,
+  currentUserId,
+  currentUserRole,
 }: {
   interview: Interview;
   orgMembers: OrgMember[];
   rounds: InterviewType[];
+  currentUserId: string;
+  currentUserRole: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -820,30 +906,13 @@ function EditInterviewSheet({
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Panel</Label>
-            {orgMembers.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No team members found.
-              </p>
-            ) : (
-              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
-                {orgMembers.map((m) => (
-                  <label
-                    key={m.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-accent"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={interviewerIds.includes(m.id)}
-                      onChange={() => toggleInterviewer(m.id)}
-                    />
-                    <span className="truncate">{m.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <PanelPicker
+            members={orgMembers}
+            selectedIds={interviewerIds}
+            onToggle={toggleInterviewer}
+            currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
+          />
 
           <div className="space-y-1.5">
             <Label>Notes (optional)</Label>
