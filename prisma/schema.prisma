@@ -198,6 +198,7 @@ model Interview {
   notes          String?  @db.Text
   interviewerIds String[] // Clerk userIds of the panel
   aiQuestions    Json? // [{ category, questions: string[] }]
+  reminderSentAt DateTime? // null until the pre-interview reminder fires
   createdById    String // Clerk userId of the scheduler
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
