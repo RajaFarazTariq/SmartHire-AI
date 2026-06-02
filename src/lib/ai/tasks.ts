@@ -22,7 +22,23 @@ function parseJson(text: string): unknown {
     .replace(/^```(?:json)?/i, "")
     .replace(/```$/, "")
     .trim();
-  return JSON.parse(cleaned);
+  try {
+    return JSON.parse(cleaned);
+  } catch (err) {
+    // Token cap hit mid-string → trim back to the last complete brace/bracket.
+    const lastClose = Math.max(
+      cleaned.lastIndexOf("}"),
+      cleaned.lastIndexOf("]"),
+    );
+    if (lastClose > 0) {
+      try {
+        return JSON.parse(cleaned.slice(0, lastClose + 1));
+      } catch {
+        /* fall through to original error */
+      }
+    }
+    throw err;
+  }
 }
 
 export async function extractResumeData(resumeText: string): Promise<unknown> {
@@ -100,7 +116,7 @@ export async function generateInterviewQuestions(input: {
     prompt,
     json: true,
     temperature: 0.4,
-    maxTokens: 1200,
+    maxTokens: 2500,
   });
   return interviewQuestionsSchema.parse(parseJson(text));
 }

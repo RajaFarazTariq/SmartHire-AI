@@ -8,7 +8,10 @@ import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
 import { canDelete } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity";
-import { notifyInterviewScheduled } from "@/lib/notify";
+import {
+  notifyInterviewScheduled,
+  notifyInterviewLinkUpdated,
+} from "@/lib/notify";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   generateInterviewQuestions,
@@ -204,6 +207,75 @@ export async function scheduleInterviewAction(
   revalidatePath("/interviews");
   revalidatePath("/dashboard");
   return { ok: true, id: interview.id };
+}
+
+export type UpdateInterviewInput = {
+  scheduledAt: string; // datetime-local
+  durationMins: number;
+  type: string;
+  meetingLink: string;
+  location: string;
+  interviewerIds: string[];
+  notes: string;
+};
+
+/** Edit a scheduled interview. Any workspace member (admin/manager/recruiter). */
+export async function updateInterviewAction(
+  id: string,
+  input: UpdateInterviewInput,
+): Promise<{ ok: boolean; error?: string }> {
+  const { user, orgId } = await requireWorkspace();
+
+  const interview = await prisma.interview.findFirst({ where: { id, orgId } });
+  if (!interview) return { ok: false, error: "Interview not found" };
+
+  if (!isInterviewType(input.type)) {
+    return { ok: false, error: "Invalid interview type" };
+  }
+  const when = new Date(input.scheduledAt);
+  if (Number.isNaN(when.getTime())) {
+    return { ok: false, error: "Pick a valid date and time" };
+  }
+
+  const oldLink = interview.meetingLink ?? "";
+  const newLink = input.meetingLink.trim() || null;
+  const linkChanged = (newLink ?? "") !== oldLink;
+  // If the interview is rescheduled, reset the reminder so it fires again.
+  const rescheduled = when.getTime() !== interview.scheduledAt.getTime();
+
+  await prisma.interview.update({
+    where: { id },
+    data: {
+      scheduledAt: when,
+      durationMins: Math.max(5, Math.min(480, input.durationMins || 45)),
+      type: input.type,
+      meetingLink: newLink,
+      location: input.location.trim() || null,
+      notes: input.notes.trim() || null,
+      interviewerIds: input.interviewerIds,
+      ...(rescheduled ? { reminderSentAt: null } : {}),
+    },
+  });
+
+  // Notify the candidate when the meeting link is added or changed.
+  if (linkChanged && newLink) {
+    await notifyInterviewLinkUpdated(interview.candidateId, {
+      type: input.type,
+      scheduledAt: when,
+      isNew: !oldLink,
+    });
+  }
+
+  await logActivity(
+    orgId,
+    user.id,
+    "interview.scheduled",
+    `Updated ${input.type} interview`,
+  );
+
+  revalidatePath(`/candidates/${interview.candidateId}`);
+  revalidatePath("/interviews");
+  return { ok: true };
 }
 
 export async function updateInterviewStatusAction(

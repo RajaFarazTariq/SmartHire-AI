@@ -14,6 +14,7 @@ import {
   Star,
   Trash2,
   ChevronDown,
+  Pencil,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -49,6 +50,7 @@ import {
 } from "@/components/ui/sheet";
 import {
   scheduleInterviewAction,
+  updateInterviewAction,
   updateInterviewStatusAction,
   deleteInterviewAction,
   generateQuestionsAction,
@@ -117,6 +119,8 @@ export function InterviewsPanel({
           key={iv.id}
           interview={iv}
           memberMap={memberMap}
+          orgMembers={orgMembers}
+          rounds={rounds}
           currentUserId={currentUserId}
           isAdmin={isAdmin}
         />
@@ -320,11 +324,15 @@ function ScheduleSheet({
 function InterviewCard({
   interview,
   memberMap,
+  orgMembers,
+  rounds,
   currentUserId,
   isAdmin,
 }: {
   interview: Interview;
   memberMap: Map<string, string>;
+  orgMembers: OrgMember[];
+  rounds: InterviewType[];
   currentUserId: string;
   isAdmin: boolean;
 }) {
@@ -412,6 +420,11 @@ function InterviewCard({
               ))}
             </SelectContent>
           </Select>
+          <EditInterviewSheet
+            interview={interview}
+            orgMembers={orgMembers}
+            rounds={rounds}
+          />
           {isAdmin && (
             <button
               onClick={remove}
@@ -671,5 +684,187 @@ function FeedbackForm({
         </Button>
       </div>
     </div>
+  );
+}
+
+// datetime-local needs YYYY-MM-DDTHH:mm in the user's local time (not UTC).
+function toLocalInput(d: Date | string) {
+  const dt = new Date(d);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+
+function EditInterviewSheet({
+  interview,
+  orgMembers,
+  rounds,
+}: {
+  interview: Interview;
+  orgMembers: OrgMember[];
+  rounds: InterviewType[];
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState(
+    toLocalInput(interview.scheduledAt),
+  );
+  const [durationMins, setDurationMins] = useState(interview.durationMins);
+  const [type, setType] = useState<string>(interview.type);
+  const [meetingLink, setMeetingLink] = useState(interview.meetingLink ?? "");
+  const [location, setLocation] = useState(interview.location ?? "");
+  const [interviewerIds, setInterviewerIds] = useState<string[]>(
+    interview.interviewerIds,
+  );
+  const [notes, setNotes] = useState(interview.notes ?? "");
+
+  function toggleInterviewer(id: string) {
+    setInterviewerIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  async function submit() {
+    if (!scheduledAt) return toast.error("Pick a date and time");
+    setPending(true);
+    const res = await updateInterviewAction(interview.id, {
+      scheduledAt,
+      durationMins,
+      type,
+      meetingLink,
+      location,
+      interviewerIds,
+      notes,
+    });
+    setPending(false);
+    if (res.ok) {
+      toast.success("Interview updated");
+      setOpen(false);
+      router.refresh();
+    } else {
+      toast.error(res.error ?? "Could not update");
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <button
+          className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+          aria-label="Edit interview"
+          title="Edit interview"
+        >
+          <Pencil className="size-3.5" />
+        </button>
+      </SheetTrigger>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Edit interview</SheetTitle>
+          <p className="text-sm text-muted-foreground">
+            Update timing, panel, or the meeting link.
+          </p>
+        </SheetHeader>
+        <div className="space-y-4 px-4 pb-6">
+          <div className="space-y-1.5">
+            <Label>Date &amp; time</Label>
+            <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Duration (min)</Label>
+              <Input
+                type="number"
+                min={5}
+                step={5}
+                value={durationMins}
+                onChange={(e) => setDurationMins(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Round" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rounds.map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Meeting link (Zoom / Google Meet)</Label>
+            <Input
+              type="url"
+              placeholder="https://…"
+              value={meetingLink}
+              onChange={(e) => setMeetingLink(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Candidate will be notified when this is added or changed.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Location (optional)</Label>
+            <Input
+              placeholder="Office, room, or remote"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Panel</Label>
+            {orgMembers.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No team members found.
+              </p>
+            ) : (
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-2">
+                {orgMembers.map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-accent"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={interviewerIds.includes(m.id)}
+                      onChange={() => toggleInterviewer(m.id)}
+                    />
+                    <span className="truncate">{m.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Notes (optional)</Label>
+            <Textarea
+              rows={2}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          <Button onClick={submit} disabled={pending} className="w-full">
+            {pending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" /> Saving…
+              </>
+            ) : (
+              "Save changes"
+            )}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
