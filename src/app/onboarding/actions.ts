@@ -6,6 +6,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { requireDbUser } from "@/lib/auth";
 import { createNotification } from "@/lib/notify";
+import { logActivity } from "@/lib/activity";
 
 // User-side actions for the "join an existing organization" flow.
 
@@ -125,6 +126,14 @@ export async function requestToJoinAction(input: {
   } catch (err) {
     console.error("admin notify failed:", err);
   }
+
+  // Audit on the org's side so admins can see who asked to join, when.
+  await logActivity(
+    input.orgId,
+    user.id,
+    "org.request_submitted",
+    `${user.email} requested to join ${input.orgName}`,
+  );
 
   revalidatePath("/onboarding/pending");
   revalidatePath("/organization/requests");

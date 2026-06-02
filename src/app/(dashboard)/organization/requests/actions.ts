@@ -98,7 +98,7 @@ export async function approveRequestAction(
   await logActivity(
     orgId,
     user.id,
-    "org.member_added",
+    "org.request_approved",
     `Approved ${req.requesterEmail} to join the organization`,
   );
 
@@ -138,6 +138,13 @@ export async function rejectRequestAction(
     body: "You can request to join a different organization or create your own.",
     link: "/onboarding",
   });
+
+  await logActivity(
+    orgId,
+    user.id,
+    "org.request_rejected",
+    `Rejected ${req.requesterEmail}'s request to join the organization`,
+  );
 
   revalidatePath("/organization/requests");
   return { ok: true };

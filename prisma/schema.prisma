@@ -245,6 +245,21 @@ model OrgSettings {
   @@map("org_settings")
 }
 
+// Tracks who created (founded) the org. Clerk owns the org record itself; we
+// only need an immutable pointer to the founder so role-mgmt rules can enforce
+// "original admin is permanent". Lazily created on first authenticated org
+// request in requireWorkspace().
+model Organization {
+  orgId       String   @id // Clerk organization id
+  name        String   @unique // surfaced collision via friendly error on ensureOrgRecord
+  foundedById String // Clerk userId of the original/permanent admin
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([foundedById])
+  @@map("organizations")
+}
+
 // A recruiter's request to join an existing Clerk organization. Created when
 // they pick an org during onboarding; awaits an org admin's decision.
 model OrganizationRequest {
