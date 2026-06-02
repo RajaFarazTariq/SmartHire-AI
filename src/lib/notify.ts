@@ -96,6 +96,64 @@ export async function notifyInterviewReminder(
   }
 }
 
+/** Notifies a member that their role within an org has changed. */
+export async function notifyRoleChanged(
+  userId: string,
+  info: {
+    orgName: string;
+    fromLabel: string;
+    toLabel: string;
+    direction: "promoted" | "demoted" | "changed";
+  },
+) {
+  const title =
+    info.direction === "promoted"
+      ? `You were promoted to ${info.toLabel}`
+      : info.direction === "demoted"
+        ? `Your role was changed to ${info.toLabel}`
+        : `Your role was updated to ${info.toLabel}`;
+  await createNotification({
+    userId,
+    type:
+      info.direction === "promoted"
+        ? "org.role.promoted"
+        : info.direction === "demoted"
+          ? "org.role.demoted"
+          : "org.role.changed",
+    title,
+    body: `Your role in ${info.orgName} changed from ${info.fromLabel} to ${info.toLabel}.`,
+    link: "/organization",
+  });
+}
+
+/** Notifies a user that they were removed from an organization. */
+export async function notifyMemberRemoved(
+  userId: string,
+  info: { orgName: string },
+) {
+  await createNotification({
+    userId,
+    type: "org.member.removed",
+    title: `You were removed from ${info.orgName}`,
+    body: "If this was unexpected, contact the organization's admin.",
+    link: "/continue",
+  });
+}
+
+/** Notifies a member that the organization has been deleted. */
+export async function notifyOrgDeleted(
+  userId: string,
+  info: { orgName: string },
+) {
+  await createNotification({
+    userId,
+    type: "org.deleted",
+    title: `${info.orgName} was deleted`,
+    body: "All jobs, candidates and interviews for this workspace have been permanently removed.",
+    link: "/continue",
+  });
+}
+
 /** Notifies the applicant behind a candidate that an interview was scheduled. */
 export async function notifyInterviewScheduled(
   candidateId: string,

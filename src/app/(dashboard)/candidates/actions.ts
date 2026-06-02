@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
+import { isAdmin } from "@/lib/rbac";
 import { processCandidate } from "@/lib/extraction";
 import { logActivity } from "@/lib/activity";
 import { notifyStageChange, createNotification } from "@/lib/notify";
@@ -255,12 +256,12 @@ export async function deleteNoteAction(
 ): Promise<{ ok: boolean; error?: string }> {
   const { user, orgId, role } = await requireWorkspace();
 
-  // A note can be removed by its author or an org admin.
+  // A note can be removed by its author or by any elevated role (Admin/Manager).
   const note = await prisma.note.findFirst({
     where: { id: noteId, candidate: { orgId } },
   });
   if (!note) return { ok: false, error: "Note not found" };
-  if (note.userId !== user.id && role !== "org:admin") {
+  if (note.userId !== user.id && !isAdmin(role)) {
     return { ok: false, error: "You can only delete your own notes." };
   }
 

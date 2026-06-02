@@ -175,6 +175,86 @@ const RENDERERS: Record<string, Renderer> = {
       />
     ),
   }),
+  "org.role.promoted": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
+    subject: title,
+    element: (
+      <GenericNotificationEmail
+        heading={title}
+        preview={body ?? title}
+        paragraphs={[
+          body ?? "Your role in the organization has been promoted.",
+          "Open the workspace to see what's newly accessible to you.",
+        ]}
+        ctaLabel="Open organization"
+        ctaUrl={ctaUrl}
+        unsubscribeUrl={unsubscribeUrl}
+        managePreferencesUrl={managePreferencesUrl}
+      />
+    ),
+  }),
+  "org.role.demoted": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
+    subject: title,
+    element: (
+      <GenericNotificationEmail
+        heading={title}
+        preview={body ?? title}
+        paragraphs={[
+          body ?? "Your role in the organization has changed.",
+          "If this was unexpected, contact the organization admin.",
+        ]}
+        ctaLabel="Open organization"
+        ctaUrl={ctaUrl}
+        unsubscribeUrl={unsubscribeUrl}
+        managePreferencesUrl={managePreferencesUrl}
+      />
+    ),
+  }),
+  "org.role.changed": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
+    subject: title,
+    element: (
+      <GenericNotificationEmail
+        heading={title}
+        preview={body ?? title}
+        paragraphs={[body ?? "Your role in the organization changed."]}
+        ctaLabel="Open organization"
+        ctaUrl={ctaUrl}
+        unsubscribeUrl={unsubscribeUrl}
+        managePreferencesUrl={managePreferencesUrl}
+      />
+    ),
+  }),
+  "org.member.removed": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
+    subject: title,
+    element: (
+      <GenericNotificationEmail
+        heading={title}
+        preview={body ?? title}
+        paragraphs={[
+          body ?? "You were removed from an organization.",
+          "If this was a mistake, please contact the organization admin.",
+        ]}
+        ctaUrl={ctaUrl}
+        unsubscribeUrl={unsubscribeUrl}
+        managePreferencesUrl={managePreferencesUrl}
+      />
+    ),
+  }),
+  "org.deleted": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
+    subject: title,
+    element: (
+      <GenericNotificationEmail
+        heading={title}
+        preview={body ?? title}
+        paragraphs={[
+          body ?? "An organization you were part of has been deleted.",
+          "Any jobs, candidates and interviews in that workspace have been permanently removed.",
+        ]}
+        ctaUrl={ctaUrl}
+        unsubscribeUrl={unsubscribeUrl}
+        managePreferencesUrl={managePreferencesUrl}
+      />
+    ),
+  }),
 };
 
 export function renderEmailFor(type: string, args: RenderArgs): Rendered | null {

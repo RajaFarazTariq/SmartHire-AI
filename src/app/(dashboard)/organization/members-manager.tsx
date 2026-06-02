@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { roleLabel } from "@/lib/rbac";
+import { roleLabel, roleRank, ROLE_ADMIN, ROLE_MANAGER } from "@/lib/rbac";
 import { timeAgo } from "@/lib/activity-meta";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,7 @@ import {
   type OrgMemberRow,
   type PendingInvitation,
 } from "./member-actions";
+import { DeleteOrgDialog } from "@/components/organization/delete-org-dialog";
 
 type Tab = "members" | "settings";
 type SortKey = "name-asc" | "name-desc" | "role" | "newest" | "oldest";
@@ -83,12 +84,17 @@ const ROLE_STYLES: Record<string, string> = {
   "org:member": "bg-muted text-muted-foreground",
 };
 
+// Admin is reserved for the original founder and cannot be assigned via this UI.
+// Per-caller filtering happens at render time so Managers don't see Manager.
 const ASSIGNABLE_ROLES = [
-  { value: "org:admin", label: "Admin" },
   { value: "org:manager", label: "Manager" },
   { value: "org:recruiter", label: "Recruiter" },
   { value: "org:member", label: "Member" },
 ];
+
+function assignableRolesFor(callerRole: string) {
+  return ASSIGNABLE_ROLES.filter((r) => roleRank(callerRole) <= roleRank(r.value));
+}
 
 function initials(name: string) {
   return name
@@ -102,12 +108,16 @@ export function MembersManager({
   members,
   invitations,
   currentUserId,
+  currentUserRole,
   isAdmin,
+  isOriginalAdmin,
 }: {
   members: OrgMemberRow[];
   invitations: PendingInvitation[];
   currentUserId: string;
+  currentUserRole: string;
   isAdmin: boolean;
+  isOriginalAdmin: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("members");
   // Non-admins never get the Settings tab (which would expose Clerk's admin UI).
@@ -141,10 +151,11 @@ export function MembersManager({
             members={members}
             invitations={invitations}
             currentUserId={currentUserId}
+            currentUserRole={currentUserRole}
             isAdmin={isAdmin}
           />
         ) : (
-          <SettingsTab />
+          <SettingsTab isOriginalAdmin={isOriginalAdmin} />
         )}
       </div>
     </div>
@@ -204,11 +215,13 @@ function MembersTab({
   members,
   invitations,
   currentUserId,
+  currentUserRole,
   isAdmin,
 }: {
   members: OrgMemberRow[];
   invitations: PendingInvitation[];
   currentUserId: string;
+  currentUserRole: string;
   isAdmin: boolean;
 }) {
   const router = useRouter();
@@ -313,7 +326,7 @@ function MembersTab({
           </SelectContent>
         </Select>
 
-        {isAdmin && <InviteSheet />}
+        {isAdmin && <InviteSheet currentUserRole={currentUserRole} />}
       </div>
 
       {/* Member list */}
@@ -333,6 +346,7 @@ function MembersTab({
               key={m.userId}
               member={m}
               currentUserId={currentUserId}
+              currentUserRole={currentUserRole}
               isAdmin={isAdmin}
               onChanged={() => router.refresh()}
             />
@@ -403,18 +417,31 @@ function MembersTab({
 function MemberRow({
   member,
   currentUserId,
+  currentUserRole,
   isAdmin,
   onChanged,
 }: {
   member: OrgMemberRow;
   currentUserId: string;
+  currentUserRole: string;
   isAdmin: boolean;
   onChanged: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [confirmRemove, setConfirmRemove] = useState(false);
   const isMe = member.userId === currentUserId;
-  const isAdminRole = member.role === "org:admin";
+  const isAdminRole = member.role === ROLE_ADMIN;
+  const isFounder = member.isOriginalAdmin;
+  // The action menu is hidden for self, for the founder (untouchable), and
+  // when the caller is below the target's rank (Manager looking at Manager).
+  const canManageTarget =
+    isAdmin &&
+    !isMe &&
+    !isFounder &&
+    roleRank(currentUserRole) <= roleRank(member.role);
+  const assignable = assignableRolesFor(currentUserRole).filter(
+    (r) => r.value !== member.role,
+  );
 
   function changeRole(newRole: string) {
     startTransition(async () => {
@@ -489,8 +516,8 @@ function MemberRow({
           Joined {timeAgo(member.joinedAt)}
         </span>
 
-        {/* Action menu (admin, not self) */}
-        {isAdmin && !isMe && (
+        {/* Action menu — hidden against self, founder, and members above caller's rank */}
+        {canManageTarget && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -508,22 +535,20 @@ function MemberRow({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              {ASSIGNABLE_ROLES.filter((r) => r.value !== member.role).map(
-                (r) => (
-                  <DropdownMenuItem
-                    key={r.value}
-                    onClick={() => changeRole(r.value)}
-                  >
-                    {r.value === "org:admin" ? (
-                      <ShieldCheck className="size-4" />
-                    ) : (
-                      <UserCog className="size-4" />
-                    )}
-                    Change to {r.label}
-                  </DropdownMenuItem>
-                ),
-              )}
-              <DropdownMenuSeparator />
+              {assignable.map((r) => (
+                <DropdownMenuItem
+                  key={r.value}
+                  onClick={() => changeRole(r.value)}
+                >
+                  {r.value === ROLE_MANAGER ? (
+                    <ShieldCheck className="size-4" />
+                  ) : (
+                    <UserCog className="size-4" />
+                  )}
+                  Change to {r.label}
+                </DropdownMenuItem>
+              ))}
+              {assignable.length > 0 && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 onClick={() => setConfirmRemove(true)}
                 className="text-rose-600 focus:text-rose-600 dark:text-rose-400 dark:focus:text-rose-400"
@@ -619,11 +644,12 @@ function InvitationRow({
   );
 }
 
-function InviteSheet() {
+function InviteSheet({ currentUserRole }: { currentUserRole: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("org:recruiter");
+  const inviteRoles = assignableRolesFor(currentUserRole);
+  const [role, setRole] = useState(inviteRoles[1]?.value ?? "org:recruiter");
   const [pending, startTransition] = useTransition();
 
   function submit() {
@@ -671,7 +697,7 @@ function InviteSheet() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {ASSIGNABLE_ROLES.map((r) => (
+                {inviteRoles.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
                   </SelectItem>
@@ -698,20 +724,43 @@ function InviteSheet() {
   );
 }
 
-function SettingsTab() {
+function SettingsTab({ isOriginalAdmin }: { isOriginalAdmin: boolean }) {
   return (
-    <Card className="gap-0 py-0">
-      <CardContent className="p-6">
-        <OrganizationProfile
-          routing="hash"
-          appearance={{
-            elements: {
-              rootBox: "w-full",
-              cardBox: "w-full max-w-none shadow-none border-0",
-            },
-          }}
-        />
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card className="gap-0 py-0">
+        <CardContent className="p-6">
+          <OrganizationProfile
+            routing="hash"
+            appearance={{
+              elements: {
+                rootBox: "w-full",
+                cardBox: "w-full max-w-none shadow-none border-0",
+                // The Clerk-hosted danger zone is the only path that lets
+                // non-founder admins (e.g. Managers) hit a destructive
+                // delete. Hide it — we own the delete UX below.
+                membersPageDangerSection: "hidden",
+                organizationProfileSection__danger: "hidden",
+              },
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Danger zone — original founder only (Rule 12). */}
+      {isOriginalAdmin && (
+        <Card className="gap-0 border-rose-200/60 bg-rose-50/40 py-0 dark:border-rose-900/40 dark:bg-rose-950/20">
+          <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Danger zone</p>
+              <p className="text-xs text-muted-foreground">
+                Permanently delete this organization and all of its data.
+                This cannot be undone.
+              </p>
+            </div>
+            <DeleteOrgDialog />
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

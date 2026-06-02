@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
-import { requireWorkspace } from "@/lib/org";
+import { requireWorkspace, isOriginalAdmin as isOriginalAdminFor } from "@/lib/org";
 import { isAdmin, roleLabel } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -29,6 +29,7 @@ export const dynamic = "force-dynamic";
 export default async function OrganizationPage() {
   const { user, orgId, role } = await requireWorkspace();
   const admin = isAdmin(role);
+  const isFounder = await isOriginalAdminFor(orgId, user.id);
 
   // Org details from Clerk (name, logo, member count).
   let orgName = "Your organization";
@@ -207,7 +208,9 @@ export default async function OrganizationPage() {
         members={members}
         invitations={invitations}
         currentUserId={user.id}
+        currentUserRole={role}
         isAdmin={admin}
+        isOriginalAdmin={isFounder}
       />
     </div>
   );
