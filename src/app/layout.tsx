@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
+import { SessionSentinel } from "@/components/session-sentinel";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
       <body className={`${inter.variable} min-h-full font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ClerkThemeProvider>
+            <SessionSentinel />
             {children}
             <Toaster richColors position="top-right" />
           </ClerkThemeProvider>
