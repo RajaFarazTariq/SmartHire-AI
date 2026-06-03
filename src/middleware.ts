@@ -6,6 +6,7 @@ const isOrgRoute = createRouteMatcher([
   "/dashboard(.*)",
   "/jobs(.*)",
   "/candidates(.*)",
+  "/members(.*)",
   "/interviews(.*)",
   "/upload(.*)",
   "/settings(.*)",
