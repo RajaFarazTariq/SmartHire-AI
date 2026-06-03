@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -49,7 +50,8 @@ function ChartTooltip({
   );
 }
 
-// Horizontal bars read far better than 8 cramped vertical labels.
+// Vertical columns (reference style): one bar per stage with the count on top
+// and rotated stage labels along the x-axis. Reads best in a full-width card.
 export function PipelineChart({
   stageCounts,
 }: {
@@ -61,12 +63,11 @@ export function PipelineChart({
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={340}>
       <BarChart
         data={data}
-        layout="vertical"
-        margin={{ top: 4, right: 16, left: 6, bottom: 0 }}
-        barCategoryGap={10}
+        margin={{ top: 24, right: 12, left: -8, bottom: 56 }}
+        barCategoryGap="20%"
       >
         <defs>
           {data.map((d) => {
@@ -74,26 +75,39 @@ export function PipelineChart({
             return (
               <linearGradient
                 key={d.stage}
-                id={`bar-${slug(d.stage)}`}
+                id={`vbar-${slug(d.stage)}`}
                 x1="0"
                 y1="0"
-                x2="1"
-                y2="0"
+                x2="0"
+                y2="1"
               >
-                <stop offset="0%" stopColor={c} stopOpacity={0.9} />
+                <stop offset="0%" stopColor={c} stopOpacity={0.95} />
                 <stop offset="100%" stopColor={c} stopOpacity={0.45} />
               </linearGradient>
             );
           })}
         </defs>
-        <XAxis type="number" hide allowDecimals={false} />
-        <YAxis
-          type="category"
+        <CartesianGrid
+          vertical={false}
+          stroke="var(--border)"
+          strokeDasharray="3 3"
+        />
+        <XAxis
           dataKey="stage"
-          width={140}
+          tick={{ ...axisTick, fontSize: 11 }}
+          axisLine={false}
+          tickLine={false}
+          interval={0}
+          angle={-35}
+          textAnchor="end"
+          height={56}
+        />
+        <YAxis
+          allowDecimals={false}
           tick={axisTick}
           axisLine={false}
           tickLine={false}
+          width={28}
         />
         <Tooltip
           cursor={{ fill: "var(--muted)", opacity: 0.4 }}
@@ -101,13 +115,20 @@ export function PipelineChart({
         />
         <Bar
           dataKey="count"
-          radius={[0, 6, 6, 0]}
-          maxBarSize={20}
+          radius={[6, 6, 0, 0]}
+          maxBarSize={48}
           animationDuration={900}
           animationEasing="ease-out"
         >
+          <LabelList
+            dataKey="count"
+            position="top"
+            fill="var(--foreground)"
+            fontSize={11}
+            fontWeight={600}
+          />
           {data.map((d) => (
-            <Cell key={d.stage} fill={`url(#bar-${slug(d.stage)})`} />
+            <Cell key={d.stage} fill={`url(#vbar-${slug(d.stage)})`} />
           ))}
         </Bar>
       </BarChart>
