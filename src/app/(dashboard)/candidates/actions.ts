@@ -69,7 +69,7 @@ export type CandidateApplication = {
 export type CandidateDirectoryRow = {
   /** Latest candidate row id — used as the route target for "View profile". */
   primaryId: string;
-  /** Stable dedup key: email lowercased; falls back to fullName-lowercased; else the row id. */
+  /** Stable identity key: the applicant ACCOUNT (Application.applicantId). */
   dedupKey: string;
   fullName: string | null;
   email: string | null;
@@ -100,8 +100,12 @@ const DIRECTORY_SELECT = {
   userId: true,
   application: {
     select: {
+      applicantId: true,
       jobId: true,
       job: { select: { title: true } },
+      // The applicant ACCOUNT — the true, stable identity of the candidate
+      // (the resume's parsed name/email can be wrong or null).
+      applicant: { select: { fullName: true, email: true } },
     },
   },
   user: { select: { fullName: true, email: true } },
@@ -118,15 +122,14 @@ export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> 
     select: DIRECTORY_SELECT,
   });
 
-  // Resolve a stable dedup key for each row. Email wins (most reliable);
-  // fall back to lowercased fullName so people without email still group;
-  // last resort = the row id (no grouping).
+  // Identity is the applicant ACCOUNT, never the resume. Group strictly by
+  // Application.applicantId so one person = one card regardless of how many
+  // jobs they applied to. fullName is NEVER used for grouping (distinct people
+  // share names, and an applicant can upload a resume that parses to someone
+  // else's name). Email is not a key either — it is resume-extracted and often
+  // null; it is kept only for display/validation.
   function keyFor(r: (typeof rows)[number]): string {
-    const e = r.email?.trim().toLowerCase();
-    if (e) return `e:${e}`;
-    const n = r.fullName?.trim().toLowerCase();
-    if (n) return `n:${n}`;
-    return `id:${r.id}`;
+    return r.application?.applicantId ?? `row:${r.id}`;
   }
 
   const groups = new Map<string, (typeof rows)[number][]>();
@@ -140,6 +143,7 @@ export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> 
   return Array.from(groups.values()).map((bucket) => {
     // The bucket is already sorted by uploadedAt desc thanks to the query.
     const latest = bucket[0];
+    const account = latest.application?.applicant;
     const applications: CandidateApplication[] = bucket.map((r) => ({
       candidateId: r.id,
       // Every row here is guaranteed to have an Application (filtered above),
@@ -173,8 +177,10 @@ export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> 
     return {
       primaryId: latest.id,
       dedupKey: keyFor(latest),
-      fullName: latest.fullName,
-      email: latest.email,
+      // Prefer the applicant account's name/email (stable identity); fall back
+      // to the resume-parsed values only if the account fields are blank.
+      fullName: account?.fullName ?? latest.fullName,
+      email: account?.email ?? latest.email,
       currentTitle: latest.currentTitle,
       yearsExperience: latest.yearsExperience,
       extractedSkills,
@@ -186,6 +192,56 @@ export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> 
       uploaderName: latest.user?.fullName ?? latest.user?.email ?? null,
     };
   });
+}
+
+export type ApplicantApplication = {
+  candidateId: string;
+  jobId: string;
+  jobTitle: string;
+  stage: string;
+  status: string;
+  appliedAt: Date;
+  /** True for the candidate row currently being viewed. */
+  isCurrent: boolean;
+};
+
+/**
+ * Every application submitted by the applicant account that owns `candidateId`,
+ * so a candidate's profile can aggregate all of their applications. Returns []
+ * for recruiter-uploaded candidates (which have no Application/applicant).
+ */
+export async function getApplicantApplications(
+  candidateId: string,
+): Promise<ApplicantApplication[]> {
+  const { orgId } = await requireWorkspace();
+  const current = await prisma.candidate.findFirst({
+    where: { id: candidateId, orgId },
+    select: { application: { select: { applicantId: true } } },
+  });
+  const applicantId = current?.application?.applicantId;
+  if (!applicantId) return [];
+
+  const apps = await prisma.application.findMany({
+    where: { applicantId, candidate: { orgId } },
+    orderBy: { createdAt: "desc" },
+    select: {
+      jobId: true,
+      job: { select: { title: true } },
+      candidate: {
+        select: { id: true, stage: true, status: true, uploadedAt: true },
+      },
+    },
+  });
+
+  return apps.map((a) => ({
+    candidateId: a.candidate.id,
+    jobId: a.jobId,
+    jobTitle: a.job.title,
+    stage: a.candidate.stage,
+    status: a.candidate.status,
+    appliedAt: a.candidate.uploadedAt,
+    isCurrent: a.candidate.id === candidateId,
+  }));
 }
 
 // Inline copy of PIPELINE_STAGES order so we don't churn imports through the
