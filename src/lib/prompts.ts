@@ -24,6 +24,48 @@ Rules:
 Resume:
 {resumeText}`;
 
+// Richer extraction used to auto-fill a job-seeker's PROFILE (not the matching
+// pipeline). Pulls the full set of profile fields; everything is optional and
+// must be left null/empty when not confidently found in the resume.
+export const PROFILE_EXTRACTION_PROMPT = `You are an expert resume parser helping a job seeker fill in their profile.
+Extract structured information from the resume below.
+
+Return ONLY valid JSON matching this schema (no markdown, no commentary):
+{
+  "fullName": string | null,
+  "email": string | null,
+  "phone": string | null,
+  "location": string | null,
+  "headline": string | null,
+  "summary": string | null,
+  "skills": string[],
+  "experience": [
+    { "title": string, "company": string, "period": string, "description": string }
+  ],
+  "education": [
+    { "school": string, "degree": string, "period": string }
+  ],
+  "certifications": string[],
+  "linkedinUrl": string | null,
+  "githubUrl": string | null,
+  "portfolioUrl": string | null,
+  "websiteUrl": string | null
+}
+
+Rules:
+- Only include information that is clearly present. If a field is missing or you are not confident, use null (for single values) or [] (for lists). NEVER guess or invent data.
+- "headline": the candidate's current/most-recent job title or a concise professional headline (e.g. "Senior Frontend Engineer").
+- "summary": a professional summary/objective in the candidate's own words if present, condensed to 1-3 sentences. Do not fabricate one.
+- "location": city and/or country only (e.g. "Berlin, Germany"). Omit street addresses.
+- "skills": normalize names ("Postgres" -> "PostgreSQL", "JS" -> "JavaScript", "React.js" -> "React"). Include technical and named soft skills. No duplicates.
+- "experience": most recent first. "period" is the raw date range as written (e.g. "2021 - Present"). "description" is a short 1-2 sentence summary of the role; use "" if none.
+- "education": most recent first. "period" is the raw date range; use "" if absent.
+- "certifications": names of certifications/licenses only; [] if none.
+- URL fields: return the full URL if present (add https:// if the resume shows a bare domain), else null. Do not put a LinkedIn URL in githubUrl, etc.
+
+Resume:
+{resumeText}`;
+
 export const SUMMARY_PROMPT = `You are a recruiting assistant. Assess this candidate's fit for the role.
 
 Job: {jobTitle}

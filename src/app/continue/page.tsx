@@ -5,6 +5,7 @@ import { getOrCreateDbUser } from "@/lib/auth";
 import { markAsCandidate, CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
 import { getActiveOrgId, hasOrgMembership } from "@/lib/access";
 import { hasPendingJoinRequest } from "@/app/onboarding/actions";
+import { isValidName } from "@/lib/validators/name";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,12 @@ export default async function ContinuePage() {
   }
 
   if (!user) redirect("/sign-in");
+
+  // Name-gate: every sign-up funnels through here, so this is where we ensure
+  // each account has a valid display name before reaching the app. Clerk's
+  // hosted sign-up form can't run our validation inline, so we enforce it at
+  // this boundary. Invalid/blank names → one-time "confirm your name" step.
+  if (!isValidName(user.fullName)) redirect("/welcome");
 
   // Org membership is the source of truth (independent of accountType / stale
   // session). An active org → straight to the recruiter app.

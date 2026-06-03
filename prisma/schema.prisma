@@ -167,6 +167,7 @@ model CandidateProfile {
   phone        String?
   bio          String?  @db.Text
   skills       String[]
+  certifications String[] // names of certifications/licenses
   experience   Json? // [{ title, company, period, description }]
   education    Json? // [{ school, degree, period }]
   linkedinUrl  String?

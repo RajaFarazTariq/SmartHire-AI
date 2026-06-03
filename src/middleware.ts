@@ -21,6 +21,7 @@ const isAuthOnlyRoute = createRouteMatcher([
   "/portal(.*)",
   "/continue(.*)",
   "/onboarding(.*)",
+  "/welcome(.*)",
 ]);
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
