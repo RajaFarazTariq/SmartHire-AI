@@ -409,11 +409,13 @@ function InterviewCard({
   );
   const myFeedback = interview.feedback.find((f) => f.interviewerId === currentUserId);
   // Conduct gate — keep in sync with src/lib/interview-access.ts canConductInterview.
-  // Legacy interviews with empty panels fall back to the original scheduler.
+  // Elevated roles (Admin/Manager) always have full access; otherwise conduct =
+  // being on the panel (with createdById fallback for legacy empty-panel rows).
   const canConduct =
-    interview.interviewerIds.length > 0
+    isAdmin ||
+    (interview.interviewerIds.length > 0
       ? interview.interviewerIds.includes(currentUserId)
-      : interview.createdById === currentUserId;
+      : interview.createdById === currentUserId);
 
   function changeStatus(status: string) {
     startTransition(async () => {

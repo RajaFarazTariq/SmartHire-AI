@@ -18,14 +18,18 @@ type MinimalInterview = {
  * generate the panel summary. Reads (viewing the interview) are NOT gated by
  * this function — those stay open to every org member.
  *
- * Backward-compat: for legacy interviews where interviewerIds is empty
- * (created before this gate), we fall back to interview.createdById so the
- * original scheduler is never locked out.
+ * Elevated roles (Admin / Manager) always have full conduct access — they
+ * oversee hiring and may manage any interview they didn't personally join,
+ * including generating AI questions. For everyone else, conduct = being on the
+ * panel. Backward-compat: for legacy interviews where interviewerIds is empty,
+ * we fall back to interview.createdById so the original scheduler isn't locked out.
  */
 export function canConductInterview(
   interview: MinimalInterview,
   callerId: string,
+  callerIsElevated = false,
 ): boolean {
+  if (callerIsElevated) return true;
   if (interview.interviewerIds.length > 0) {
     return interview.interviewerIds.includes(callerId);
   }
@@ -35,8 +39,11 @@ export function canConductInterview(
 export function assertCanConduct(
   interview: MinimalInterview,
   callerId: string,
+  callerIsElevated = false,
 ): GuardResult {
-  if (canConductInterview(interview, callerId)) return { ok: true };
+  if (canConductInterview(interview, callerId, callerIsElevated)) {
+    return { ok: true };
+  }
   return {
     ok: false,
     error: "View-only — you're not on this interview's panel.",

@@ -6,7 +6,7 @@ import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
-import { canDelete } from "@/lib/rbac";
+import { canDelete, isAdmin } from "@/lib/rbac";
 import {
   assertCanConduct,
   canConductInterview,
@@ -277,7 +277,7 @@ export async function updateInterviewAction(
 
   // Conduct gate: only assigned interviewers (or the original scheduler on
   // legacy rows with empty panels) can edit.
-  const conduct = assertCanConduct(interview, user.id);
+  const conduct = assertCanConduct(interview, user.id, isAdmin(role));
   if (!conduct.ok) return conduct;
 
   if (!isInterviewType(input.type)) {
@@ -366,13 +366,13 @@ export async function updateInterviewStatusAction(
   id: string,
   status: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { user, orgId } = await requireWorkspace();
+  const { user, orgId, role } = await requireWorkspace();
   if (!isInterviewStatus(status)) return { ok: false, error: "Invalid status" };
 
   const interview = await prisma.interview.findFirst({ where: { id, orgId } });
   if (!interview) return { ok: false, error: "Interview not found" };
 
-  const conduct = assertCanConduct(interview, user.id);
+  const conduct = assertCanConduct(interview, user.id, isAdmin(role));
   if (!conduct.ok) return conduct;
 
   await prisma.interview.update({ where: { id }, data: { status } });
@@ -400,7 +400,7 @@ export async function deleteInterviewAction(
 export async function generateQuestionsAction(
   interviewId: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const { user, orgId } = await requireWorkspace();
+  const { user, orgId, role } = await requireWorkspace();
 
   const limit = rateLimit(`iq:${user.id}`, 15, 60_000);
   if (!limit.ok) {
@@ -416,7 +416,7 @@ export async function generateQuestionsAction(
   });
   if (!interview) return { ok: false, error: "Interview not found" };
 
-  const conduct = assertCanConduct(interview, user.id);
+  const conduct = assertCanConduct(interview, user.id, isAdmin(role));
   if (!conduct.ok) return conduct;
 
   // Skills the candidate is missing for this job (to probe in the interview).
@@ -462,7 +462,7 @@ export async function submitFeedbackAction(
     comments: string;
   },
 ): Promise<{ ok: boolean; error?: string }> {
-  const { user, orgId } = await requireWorkspace();
+  const { user, orgId, role } = await requireWorkspace();
 
   if (!isRecommendation(data.recommendation)) {
     return { ok: false, error: "Pick a recommendation" };
@@ -472,7 +472,7 @@ export async function submitFeedbackAction(
   const interview = await prisma.interview.findFirst({ where: { id: interviewId, orgId } });
   if (!interview) return { ok: false, error: "Interview not found" };
 
-  const conduct = assertCanConduct(interview, user.id);
+  const conduct = assertCanConduct(interview, user.id, isAdmin(role));
   if (!conduct.ok) return conduct;
 
   await prisma.interviewFeedback.upsert({
@@ -505,7 +505,7 @@ export async function submitFeedbackAction(
 export async function summarizePanelAction(
   interviewId: string,
 ): Promise<{ ok: boolean; summary?: PanelSummaryData; error?: string }> {
-  const { user, orgId } = await requireWorkspace();
+  const { user, orgId, role } = await requireWorkspace();
 
   const limit = rateLimit(`ps:${user.id}`, 15, 60_000);
   if (!limit.ok) {
@@ -522,7 +522,7 @@ export async function summarizePanelAction(
   });
   if (!interview) return { ok: false, error: "Interview not found" };
 
-  const conduct = assertCanConduct(interview, user.id);
+  const conduct = assertCanConduct(interview, user.id, isAdmin(role));
   if (!conduct.ok) return conduct;
 
   if (interview.feedback.length === 0) {
