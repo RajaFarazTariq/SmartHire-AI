@@ -6,7 +6,6 @@ import {
   ArrowRight,
   TrendingUp,
   GitBranch,
-  BarChart3,
   Filter,
 } from "lucide-react";
 
@@ -19,7 +18,6 @@ import { ConversionFunnel } from "@/components/dashboard/conversion-funnel";
 import { RecentUploads } from "@/components/dashboard/recent-uploads";
 import {
   PipelineChart,
-  ScoreDistributionChart,
   TrendAreaChart,
 } from "@/components/dashboard/charts-lazy";
 import { FadeIn } from "@/components/motion";
@@ -144,44 +142,22 @@ export default async function DashboardPage() {
         </FadeIn>
       </div>
 
-      {/* Pipeline + score distribution — equal-height row */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        <FadeIn delay={0.05} className="h-full">
-          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.emerald)}>
-            <CardHeader>
-              <SectionTitle
-                icon={GitBranch}
-                tint="bg-emerald-500/10 text-emerald-500"
-                title="Hiring pipeline"
-                description="Candidates by stage across all jobs"
-              />
-            </CardHeader>
-            <CardContent>
-              <PipelineChart stageCounts={stats.stageCounts} />
-            </CardContent>
-          </Card>
-        </FadeIn>
-
-        <FadeIn delay={0.1} className="h-full">
-          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.blue)}>
-            <CardHeader>
-              <SectionTitle
-                icon={BarChart3}
-                tint="bg-blue-500/10 text-blue-500"
-                title="Match score distribution"
-                description={
-                  stats.scoredCount > 0
-                    ? `Across ${stats.scoredCount} scored match${stats.scoredCount === 1 ? "" : "es"}`
-                    : "Score candidates against jobs to see analytics"
-                }
-              />
-            </CardHeader>
-            <CardContent>
-              <ScoreDistributionChart data={stats.scoreDistribution} />
-            </CardContent>
-          </Card>
-        </FadeIn>
-      </div>
+      {/* Hiring pipeline — full-width rectangle */}
+      <FadeIn delay={0.05}>
+        <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.emerald)}>
+          <CardHeader>
+            <SectionTitle
+              icon={GitBranch}
+              tint="bg-emerald-500/10 text-emerald-500"
+              title="Hiring pipeline"
+              description="Candidates by stage across all jobs"
+            />
+          </CardHeader>
+          <CardContent>
+            <PipelineChart stageCounts={stats.stageCounts} />
+          </CardContent>
+        </Card>
+      </FadeIn>
 
       {/* Recent uploads — full width */}
       <FadeIn delay={0.05}>
