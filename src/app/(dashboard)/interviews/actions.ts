@@ -16,6 +16,7 @@ import { logActivity } from "@/lib/activity";
 import {
   notifyInterviewScheduled,
   notifyInterviewLinkUpdated,
+  notifyInterviewPanel,
 } from "@/lib/notify";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -229,6 +230,15 @@ export async function scheduleInterviewAction(
   }
 
   await notifyInterviewScheduled(candidate.id, { type: input.type, scheduledAt: when });
+  // Notify the assigned panel (recruiters/managers) — in-app + email.
+  await notifyInterviewPanel(panel.ids, {
+    type: input.type,
+    scheduledAt: when,
+    candidateName: candidate.fullName ?? candidate.filename,
+    jobTitle: job.title,
+    candidateId: candidate.id,
+    excludeUserId: user.id,
+  });
   await logActivity(
     orgId,
     user.id,
@@ -312,6 +322,31 @@ export async function updateInterviewAction(
       type: input.type,
       scheduledAt: when,
       isNew: !oldLink,
+    });
+  }
+
+  // Notify panelists newly added to this interview (not the editor).
+  const newlyAdded = panel.ids.filter(
+    (id) => !interview.interviewerIds.includes(id),
+  );
+  if (newlyAdded.length > 0) {
+    const [candidate, job] = await Promise.all([
+      prisma.candidate.findUnique({
+        where: { id: interview.candidateId },
+        select: { fullName: true, filename: true },
+      }),
+      prisma.job.findUnique({
+        where: { id: interview.jobId },
+        select: { title: true },
+      }),
+    ]);
+    await notifyInterviewPanel(newlyAdded, {
+      type: input.type,
+      scheduledAt: when,
+      candidateName: candidate?.fullName ?? candidate?.filename ?? "a candidate",
+      jobTitle: job?.title ?? "the role",
+      candidateId: interview.candidateId,
+      excludeUserId: user.id,
     });
   }
 

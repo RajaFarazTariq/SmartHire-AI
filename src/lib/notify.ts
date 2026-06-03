@@ -154,6 +154,41 @@ export async function notifyOrgDeleted(
   });
 }
 
+/**
+ * Notifies the org members assigned to an interview panel (e.g. when an admin
+ * schedules an interview and assigns it to recruiters/managers). In-app + email
+ * (best-effort). The person who scheduled it is excluded so they don't notify
+ * themselves.
+ */
+export async function notifyInterviewPanel(
+  interviewerIds: string[],
+  info: {
+    type: string;
+    scheduledAt: Date;
+    candidateName: string;
+    jobTitle: string;
+    candidateId: string;
+    excludeUserId?: string;
+  },
+) {
+  const recipients = [...new Set(interviewerIds)].filter(
+    (id) => id && id !== info.excludeUserId,
+  );
+  if (recipients.length === 0) return;
+
+  await Promise.all(
+    recipients.map((userId) =>
+      createNotification({
+        userId,
+        type: "interview.panel_assigned",
+        title: `You're on a ${info.type} interview panel`,
+        body: `You've been assigned to interview ${info.candidateName} for "${info.jobTitle}" on ${info.scheduledAt.toLocaleString()}.`,
+        link: `/candidates/${info.candidateId}`,
+      }),
+    ),
+  );
+}
+
 /** Notifies the applicant behind a candidate that an interview was scheduled. */
 export async function notifyInterviewScheduled(
   candidateId: string,
