@@ -1,65 +1,138 @@
 "use server";
 
+import { clerkClient } from "@clerk/nextjs/server";
+
 import { prisma } from "@/lib/prisma";
-import { requireWorkspace } from "@/lib/org";
-import { CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
+import { requireWorkspace, ensureOrgRecord } from "@/lib/org";
+import { roleLabel, roleRank } from "@/lib/rbac";
 
 export type MemberRow = {
+  /** Clerk userId for staff; candidate row id for hired people. */
   id: string;
-  fullName: string | null;
-  email: string;
-  username: string | null;
-  createdAt: Date;
-  headline: string | null;
-  location: string | null;
-  skills: string[];
-  hasResume: boolean;
+  name: string;
+  email: string | null;
+  imageUrl: string | null;
+  /** "staff" = a Clerk org member; "hired" = a candidate at stage "Hired". */
+  kind: "staff" | "hired";
+  /** Display label: Admin / Manager / Recruiter / Member / Hired. */
+  role: string;
+  /** Sort/filter key: org:admin | org:manager | org:recruiter | org:member | hired. */
+  roleKey: string;
+  /** The job a hired person was hired into (null for staff). */
+  jobTitle: string | null;
+  /** Staff: when they joined the org. Hired: when they applied. */
+  since: Date | null;
+  /** True for the org founder (permanent admin). */
+  isOriginalAdmin: boolean;
 };
 
+const HIRED_STAGE = "Hired";
+const HIRED_RANK = 50; // sorts after all staff roles (admin=0 … member=3)
+
 /**
- * Members = candidate-portal sign-ups who have NOT yet applied to any job.
- * A member becomes a Candidate (and moves to the Candidates page) the moment
- * they submit their first application, so we filter on `applications: none`.
- *
- * Note: portal members are not tied to any organization (only recruiters/jobs
- * are org-scoped), so this is a platform-wide list. Gated to org members only
- * via requireWorkspace(). Revisit scoping if/when the portal becomes per-org.
+ * The organization roster: every Clerk org member (Admin / Manager / Recruiter /
+ * Member) plus everyone hired into the org (candidates at stage "Hired"). Hired
+ * people are deduplicated by their applicant account. Visible to any org member.
  */
 export async function getMembers(): Promise<MemberRow[]> {
-  await requireWorkspace();
+  const { orgId } = await requireWorkspace();
 
-  const users = await prisma.user.findMany({
-    where: {
-      accountType: CANDIDATE_ACCOUNT_TYPE,
-      applications: { none: {} },
-    },
-    orderBy: { createdAt: "desc" },
+  const [staff, hired] = await Promise.all([
+    getOrgStaff(orgId),
+    getHiredPeople(orgId),
+  ]);
+
+  return [...staff, ...hired].sort((a, b) => {
+    const ra = a.kind === "hired" ? HIRED_RANK : roleRank(a.roleKey);
+    const rb = b.kind === "hired" ? HIRED_RANK : roleRank(b.roleKey);
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+async function getOrgStaff(orgId: string): Promise<MemberRow[]> {
+  try {
+    const client = await clerkClient();
+    const res = await client.organizations.getOrganizationMembershipList({
+      organizationId: orgId,
+      limit: 200,
+    });
+    const founderRow = await ensureOrgRecord(orgId);
+    const founderId = founderRow?.foundedById ?? null;
+
+    return res.data
+      .map((m): MemberRow | null => {
+        const u = m.publicUserData;
+        const userId = u?.userId;
+        if (!userId) return null;
+        const name =
+          [u?.firstName, u?.lastName].filter(Boolean).join(" ") ||
+          u?.identifier ||
+          "Member";
+        return {
+          id: userId,
+          name,
+          email: u?.identifier ?? null,
+          imageUrl: u?.imageUrl ?? null,
+          kind: "staff",
+          role: roleLabel(m.role),
+          roleKey: m.role,
+          jobTitle: null,
+          since: new Date(m.createdAt),
+          isOriginalAdmin: userId === founderId,
+        };
+      })
+      .filter((m): m is MemberRow => m !== null);
+  } catch (err) {
+    console.error("getOrgStaff failed:", err);
+    return [];
+  }
+}
+
+async function getHiredPeople(orgId: string): Promise<MemberRow[]> {
+  const rows = await prisma.candidate.findMany({
+    where: { orgId, stage: HIRED_STAGE },
+    orderBy: { uploadedAt: "desc" },
     select: {
       id: true,
       fullName: true,
       email: true,
-      username: true,
-      createdAt: true,
-      profile: {
+      uploadedAt: true,
+      application: {
         select: {
-          headline: true,
-          location: true,
-          skills: true,
-          resumeUrl: true,
+          applicantId: true,
+          job: { select: { title: true } },
+          applicant: { select: { fullName: true, email: true } },
         },
       },
     },
   });
 
-  return users.map((u) => ({
-    id: u.id,
-    fullName: u.fullName,
-    email: u.email,
-    username: u.username,
-    createdAt: u.createdAt,
-    headline: u.profile?.headline ?? null,
-    location: u.profile?.location ?? null,
-    skills: u.profile?.skills ?? [],
-    hasResume: Boolean(u.profile?.resumeUrl),
-  }));
+  // One row per hired person. Prefer the applicant account identity; key by
+  // applicantId, then email, then the row id (consistent with the Candidates
+  // directory's identity rules).
+  const seen = new Set<string>();
+  const out: MemberRow[] = [];
+  for (const r of rows) {
+    const account = r.application?.applicant;
+    const key =
+      r.application?.applicantId ??
+      (account?.email ?? r.email)?.toLowerCase() ??
+      `row:${r.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      id: r.id,
+      name: account?.fullName ?? r.fullName ?? account?.email ?? r.email ?? "Hired candidate",
+      email: account?.email ?? r.email,
+      imageUrl: null,
+      kind: "hired",
+      role: "Hired",
+      roleKey: "hired",
+      jobTitle: r.application?.job?.title ?? null,
+      since: r.uploadedAt,
+      isOriginalAdmin: false,
+    });
+  }
+  return out;
 }

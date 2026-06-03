@@ -11,7 +11,7 @@ export default async function MembersPage() {
     <div>
       <PageHeader
         title="Members"
-        description="People who signed up through the candidate portal but haven't applied to a job yet. They become candidates on their first application."
+        description="Everyone in your organization — admins, managers, recruiters — plus the people you've hired."
       />
       <MembersList members={members} />
     </div>
