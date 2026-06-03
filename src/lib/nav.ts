@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
+  UserPlus,
   CalendarClock,
   UploadCloud,
   History,
@@ -62,6 +63,18 @@ export const dashboardNav: NavItem[] = [
       "hover:border-emerald-500/40 hover:bg-emerald-500/10 hover:shadow-sm hover:shadow-emerald-500/15",
     active:
       "border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 to-emerald-500/5 text-emerald-700 shadow-sm shadow-emerald-500/20 dark:text-emerald-200",
+  },
+  {
+    title: "Members",
+    href: "/members",
+    icon: UserPlus,
+    tile: "bg-teal-500/15 text-teal-500",
+    activeTile: "bg-teal-500 text-white",
+    accent: "bg-teal-500/50",
+    hover:
+      "hover:border-teal-500/40 hover:bg-teal-500/10 hover:shadow-sm hover:shadow-teal-500/15",
+    active:
+      "border-teal-500/40 bg-gradient-to-r from-teal-500/15 to-teal-500/5 text-teal-700 shadow-sm shadow-teal-500/20 dark:text-teal-200",
   },
   {
     title: "Interviews",

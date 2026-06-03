@@ -16,8 +16,18 @@ import { extractionSchema } from "./validators/extraction";
 export async function processCandidate(candidateId: string) {
   const candidate = await prisma.candidate.findUnique({
     where: { id: candidateId },
+    include: {
+      // For portal applicants, the application links back to the account that
+      // applied — the source of truth for identity when the resume doesn't parse.
+      application: {
+        select: { applicant: { select: { email: true, fullName: true } } },
+      },
+    },
   });
   if (!candidate) throw new Error("Candidate not found");
+
+  const accountEmail = candidate.application?.applicant?.email ?? null;
+  const accountName = candidate.application?.applicant?.fullName ?? null;
 
   // 1. Structured extraction (primary)
   const raw = await extractResumeData(candidate.rawText);
@@ -40,13 +50,16 @@ export async function processCandidate(candidateId: string) {
     console.error(`Pinecone upsert failed for ${candidate.id}:`, err);
   }
 
-  // 3. Persist
+  // 3. Persist. Never let a failed/empty resume parse erase identity we already
+  //    have: prefer the parsed value, then the existing row value, then the
+  //    applicant account. This stops AI extraction from overwriting a real
+  //    email/name with null (the cause of broken dedup downstream).
   await prisma.candidate.update({
     where: { id: candidate.id },
     data: {
-      fullName: data.fullName,
-      email: data.email,
-      phone: data.phone,
+      fullName: data.fullName ?? candidate.fullName ?? accountName,
+      email: data.email ?? candidate.email ?? accountEmail,
+      phone: data.phone ?? candidate.phone,
       currentTitle: data.currentTitle,
       extractedSkills: data.skills,
       yearsExperience: Math.round(data.yearsExperience),

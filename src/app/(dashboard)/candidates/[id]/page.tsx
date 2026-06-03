@@ -9,11 +9,16 @@ import {
   GraduationCap,
   Clock,
   CalendarClock,
+  Layers,
 } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+import { STAGE_STYLES } from "@/lib/pipeline";
 
 import {
   getCandidate,
   getCandidateScores,
+  getApplicantApplications,
   listCandidateNotes,
 } from "../actions";
 import {
@@ -57,6 +62,7 @@ export default async function CandidateDetailPage({
     ws,
     suggestedJobId,
     enabledRounds,
+    applicantApplications,
   ] = await Promise.all([
     getCandidate(id),
     getCandidateScores(id),
@@ -67,6 +73,7 @@ export default async function CandidateDetailPage({
     requireWorkspace(),
     getSuggestedJobId(id),
     getEnabledRounds(),
+    getApplicantApplications(id),
   ]);
 
   if (!candidate) {
@@ -183,6 +190,57 @@ export default async function CandidateDetailPage({
           </Card>
         </div>
       </div>
+
+      {/* All applications by this applicant (aggregated profile view) */}
+      {applicantApplications.length > 0 && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Layers className="size-4 text-primary" /> Applications
+                <Badge variant="secondary" className="font-normal">
+                  {applicantApplications.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-1">
+              {applicantApplications.map((a) => (
+                <Link
+                  key={a.candidateId}
+                  href={`/candidates/${a.candidateId}`}
+                  className={cn(
+                    "flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 transition-colors hover:bg-accent/40",
+                    a.isCurrent && "border-primary/40 bg-primary/5",
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {a.jobTitle}
+                      {a.isCurrent && (
+                        <span className="ml-2 text-xs font-normal text-muted-foreground">
+                          (viewing)
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Applied {a.appliedAt.toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Badge
+                    className={cn(
+                      "shrink-0 border-0",
+                      (STAGE_STYLES as Record<string, string>)[a.stage] ??
+                        "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {a.stage}
+                  </Badge>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Interviews */}
       <div className="mt-6">
