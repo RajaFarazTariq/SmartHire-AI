@@ -187,15 +187,15 @@ export default async function DashboardPage() {
       </div>
 
       {/* Top matches + activity */}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+        <div>
           {stats.topMatches.length > 0 ? (
             <FadeIn delay={0.05}>
               <TopMatches matches={stats.topMatches} />
             </FadeIn>
           ) : (
-            <Card className="h-full border-dashed">
-              <CardContent className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
                 <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
                   <Briefcase className="size-5" />
                 </span>
@@ -217,7 +217,7 @@ export default async function DashboardPage() {
         </div>
 
         <FadeIn delay={0.1}>
-          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.amber)}>
+          <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.amber)}>
             <CardHeader className="flex flex-row items-center justify-between">
               <SectionTitle
                 icon={Activity}
