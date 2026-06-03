@@ -74,6 +74,23 @@ const RENDERERS: Record<string, Renderer> = {
       />
     ),
   }),
+  "interview.panel_assigned": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
+    subject: title,
+    element: (
+      <GenericNotificationEmail
+        heading={title}
+        preview={body ?? title}
+        paragraphs={[
+          body ?? "You've been added to an interview panel.",
+          "Open the candidate to view the interview details, generate AI questions, and submit your scorecard.",
+        ]}
+        ctaLabel="View candidate"
+        ctaUrl={ctaUrl}
+        unsubscribeUrl={unsubscribeUrl}
+        managePreferencesUrl={managePreferencesUrl}
+      />
+    ),
+  }),
   "interview.link": ({ title, body, ctaUrl, unsubscribeUrl, managePreferencesUrl }) => ({
     subject: title,
     element: (
