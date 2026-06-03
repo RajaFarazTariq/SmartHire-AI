@@ -44,6 +44,14 @@ export default async function ApplyPage({
           githubUrl: profile?.githubUrl ?? "",
           portfolioUrl: profile?.portfolioUrl ?? "",
         }}
+        profileResume={
+          profile?.resumeUrl
+            ? {
+                name: profile.resumeName ?? "Your saved resume",
+                type: profile.resumeType ?? "",
+              }
+            : null
+        }
       />
     </div>
   );
