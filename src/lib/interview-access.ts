@@ -48,9 +48,10 @@ export function assertCanConduct(
  *
  * Rules enforced:
  *  1. Every interviewerId must be a current member of orgId.
- *  2. No org:admin can be on the panel UNLESS the caller is themselves an
- *     org:admin AND the panel contains only themselves (admin self-assigned
- *     interview — Rule 3 of the access-control spec).
+ *  2. No org:admin OTHER than the caller may be a panelist. The caller-admin
+ *     may include themselves (alone or alongside recruiters/managers), and an
+ *     admin/manager may assign any non-admin members (recruiters, managers,
+ *     members) to conduct the interview.
  *  3. Duplicates are de-duplicated.
  *  4. Empty panels are allowed (no interviewers chosen yet).
  *
@@ -97,21 +98,17 @@ export async function validatePanelComposition(args: {
     }
   }
 
-  // (2) admin-on-panel rule
-  const adminIds = ids.filter((id) => byId.get(id) === ROLE_ADMIN);
-  if (adminIds.length > 0) {
-    const callerIsAdmin = args.callerRole === ROLE_ADMIN;
-    const onlySelfAdmin =
-      adminIds.length === 1 &&
-      adminIds[0] === args.callerId &&
-      ids.length === 1;
-    if (!callerIsAdmin || !onlySelfAdmin) {
-      return {
-        ok: false,
-        error:
-          "Admins can't be on a panel. An Admin may only schedule an interview for themselves alone.",
-      };
-    }
+  // (2) admin-on-panel rule: no admin OTHER than the caller may be a panelist.
+  // The caller-admin may include themselves; recruiters/managers/members are
+  // always allowed, so an admin can assign an interview to other org members.
+  const otherAdminOnPanel = ids.some(
+    (id) => byId.get(id) === ROLE_ADMIN && id !== args.callerId,
+  );
+  if (otherAdminOnPanel) {
+    return {
+      ok: false,
+      error: "Another admin can't be added to an interview panel.",
+    };
   }
 
   return { ok: true, ids };
