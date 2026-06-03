@@ -30,11 +30,13 @@ export default async function ProfilePage() {
           email: user.email,
         }}
         initial={{
+          fullName: user.fullName ?? user.username ?? "",
           headline: profile?.headline ?? "",
           location: profile?.location ?? "",
           phone: profile?.phone ?? "",
           bio: profile?.bio ?? "",
           skills: profile?.skills ?? [],
+          certifications: profile?.certifications ?? [],
           experience,
           education,
           linkedinUrl: profile?.linkedinUrl ?? "",

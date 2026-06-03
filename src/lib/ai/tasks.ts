@@ -1,11 +1,16 @@
 import { aiService } from "./service";
 import {
   EXTRACTION_PROMPT,
+  PROFILE_EXTRACTION_PROMPT,
   SUMMARY_PROMPT,
   INTERVIEW_QUESTIONS_PROMPT,
   PANEL_SUMMARY_PROMPT,
 } from "@/lib/prompts";
 import { matchSummarySchema } from "@/lib/validators/extraction";
+import {
+  profileExtractionSchema,
+  type ProfileExtractionData,
+} from "@/lib/validators/profile-extraction";
 import {
   interviewQuestionsSchema,
   panelSummarySchema,
@@ -58,6 +63,34 @@ export async function extractResumeData(resumeText: string): Promise<unknown> {
   } catch {
     throw new Error("AI returned non-JSON output");
   }
+}
+
+/**
+ * Parse a resume into the full set of PROFILE fields for auto-fill. Throws on
+ * non-JSON output so the caller can fall back gracefully (the profile still
+ * works without auto-fill). Always returns schema-validated, defaulted data.
+ */
+export async function extractProfileData(
+  resumeText: string,
+): Promise<ProfileExtractionData> {
+  const prompt = PROFILE_EXTRACTION_PROMPT.replace(
+    "{resumeText}",
+    resumeText.slice(0, MAX_EXTRACTION_CHARS),
+  );
+  const { text } = await aiService.generate({
+    task: "resume_parsing",
+    prompt,
+    json: true,
+    temperature: 0.1,
+    maxTokens: 3000,
+  });
+  let parsed: unknown;
+  try {
+    parsed = parseJson(text);
+  } catch {
+    throw new Error("AI returned non-JSON output");
+  }
+  return profileExtractionSchema.parse(parsed);
 }
 
 export async function generateMatchSummary(input: {

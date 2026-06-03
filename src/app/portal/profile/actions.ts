@@ -3,20 +3,26 @@
 import { put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { clerkClient } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireDbUser } from "@/lib/auth";
-import { detectFileType } from "@/lib/parsers";
+import { detectFileType, extractResumeText } from "@/lib/parsers";
 import type { ExperienceEntry, EducationEntry } from "@/lib/candidate";
+import { validateName, splitName } from "@/lib/validators/name";
+import { extractProfileData } from "@/lib/ai/tasks";
+import type { ProfileExtractionData } from "@/lib/validators/profile-extraction";
 
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
 
 export type ProfileInput = {
+  fullName: string;
   headline: string;
   location: string;
   phone: string;
   bio: string;
   skills: string[];
+  certifications: string[];
   experience: ExperienceEntry[];
   education: EducationEntry[];
   linkedinUrl: string;
@@ -29,6 +35,26 @@ export async function updateProfileAction(
   input: ProfileInput,
 ): Promise<{ ok: boolean; error?: string }> {
   const user = await requireDbUser();
+
+  // Validate + persist the display name (authoritative server-side check).
+  const nameCheck = validateName(input.fullName);
+  if (!nameCheck.ok) {
+    return { ok: false, error: nameCheck.error };
+  }
+  if (nameCheck.value !== user.fullName) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { fullName: nameCheck.value },
+    });
+    // Best-effort sync back to Clerk so the name stays consistent everywhere.
+    try {
+      const { firstName, lastName } = splitName(nameCheck.value);
+      const client = await clerkClient();
+      await client.users.updateUser(user.id, { firstName, lastName });
+    } catch (err) {
+      console.error("updateProfileAction: Clerk name sync failed:", err);
+    }
+  }
 
   const experience = input.experience
     .filter((e) => e.title.trim() || e.company.trim())
@@ -43,6 +69,10 @@ export async function updateProfileAction(
     phone: input.phone.trim() || null,
     bio: input.bio.trim() || null,
     skills: input.skills.map((s) => s.trim()).filter(Boolean).slice(0, 50),
+    certifications: input.certifications
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .slice(0, 50),
     experience: experience as unknown as Prisma.InputJsonValue,
     education: education as unknown as Prisma.InputJsonValue,
     linkedinUrl: input.linkedinUrl.trim() || null,
@@ -62,9 +92,18 @@ export async function updateProfileAction(
   return { ok: true };
 }
 
+export type UploadResumeResult = {
+  ok: boolean;
+  error?: string;
+  /** AI-extracted profile fields for review/auto-fill. Absent if parsing failed. */
+  parsed?: ProfileExtractionData;
+  /** True when the file was stored but AI auto-fill couldn't run. */
+  parseFailed?: boolean;
+};
+
 export async function uploadResumeAction(
   formData: FormData,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<UploadResumeResult> {
   const user = await requireDbUser();
 
   const file = formData.get("file");
@@ -100,5 +139,22 @@ export async function uploadResumeAction(
 
   revalidatePath("/portal/profile");
   revalidatePath("/portal");
-  return { ok: true };
+
+  // Best-effort AI auto-fill. The upload itself always succeeds; parsing
+  // failures (unreadable file, AI unavailable) just skip auto-fill.
+  let parsed: ProfileExtractionData | undefined;
+  let parseFailed = false;
+  try {
+    const rawText = await extractResumeText(buffer, fileType);
+    if (rawText.trim().length > 0) {
+      parsed = await extractProfileData(rawText);
+    } else {
+      parseFailed = true;
+    }
+  } catch (err) {
+    console.error("uploadResumeAction: resume parsing failed:", err);
+    parseFailed = true;
+  }
+
+  return { ok: true, parsed, parseFailed };
 }
