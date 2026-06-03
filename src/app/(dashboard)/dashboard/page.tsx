@@ -106,12 +106,12 @@ export default async function DashboardPage() {
         velocity={stats.velocity}
       />
 
-      {/* Trend + funnel */}
-      <div className="grid items-start gap-5 lg:grid-cols-3">
-        <FadeIn delay={0.05} className="lg:col-span-2">
+      {/* Trend + funnel — equal-height row */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        <FadeIn delay={0.05} className="h-full lg:col-span-2">
           <Card
             className={cn(
-              "overflow-hidden bg-gradient-to-br from-card to-primary/[0.04]",
+              "h-full overflow-hidden bg-gradient-to-br from-card to-primary/[0.04]",
               CARD_HOVER_BASE,
               CARD_HOVER.primary,
             )}
@@ -130,8 +130,8 @@ export default async function DashboardPage() {
           </Card>
         </FadeIn>
 
-        <FadeIn delay={0.1}>
-          <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.violet)}>
+        <FadeIn delay={0.1} className="h-full">
+          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.violet)}>
             <CardHeader>
               <SectionTitle
                 icon={Filter}
@@ -147,10 +147,10 @@ export default async function DashboardPage() {
         </FadeIn>
       </div>
 
-      {/* Pipeline + score distribution */}
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        <FadeIn delay={0.05}>
-          <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.emerald)}>
+      {/* Pipeline + score distribution — equal-height row */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <FadeIn delay={0.05} className="h-full">
+          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.emerald)}>
             <CardHeader>
               <SectionTitle
                 icon={GitBranch}
@@ -165,8 +165,8 @@ export default async function DashboardPage() {
           </Card>
         </FadeIn>
 
-        <FadeIn delay={0.1}>
-          <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.blue)}>
+        <FadeIn delay={0.1} className="h-full">
+          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.blue)}>
             <CardHeader>
               <SectionTitle
                 icon={BarChart3}
@@ -186,83 +186,76 @@ export default async function DashboardPage() {
         </FadeIn>
       </div>
 
-      {/* Lower widgets — two INDEPENDENT columns (each its own vertical stack)
-          so neither side inherits the other's height. Content-driven, no
-          equal-height stretching → no dead whitespace under a short card. */}
-      <div className="grid items-start gap-5 lg:grid-cols-2">
-        {/* Left column: top matches, then recent uploads */}
-        <div className="space-y-5">
-          {stats.topMatches.length > 0 ? (
-            <FadeIn delay={0.05}>
-              <TopMatches matches={stats.topMatches} />
-            </FadeIn>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
-                <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <Briefcase className="size-5" />
-                </span>
-                <div>
-                  <p className="font-medium">No matches yet</p>
-                  <p className="text-sm text-muted-foreground">
-                    Create a job, upload resumes, then score candidates to see
-                    your top matches.
-                  </p>
-                </div>
-                <Button asChild size="sm">
-                  <Link href="/jobs/new">
-                    <Plus className="size-4" /> Create a job
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          <FadeIn delay={0.15}>
-            <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.cyan)}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <SectionTitle
-                  icon={UploadCloud}
-                  tint="bg-cyan-500/10 text-cyan-500"
-                  title="Recent uploads"
-                  description="Latest resumes added to your workspace"
-                />
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/candidates">
-                    All <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <RecentUploads items={stats.recentUploads} />
-              </CardContent>
-            </Card>
+      {/* Top matches + recent activity — equal-height row */}
+      <div className="grid gap-5 lg:grid-cols-2">
+        {stats.topMatches.length > 0 ? (
+          <FadeIn delay={0.05} className="h-full">
+            <TopMatches matches={stats.topMatches} />
           </FadeIn>
-        </div>
+        ) : (
+          <Card className="h-full border-dashed">
+            <CardContent className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
+              <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Briefcase className="size-5" />
+              </span>
+              <div>
+                <p className="font-medium">No matches yet</p>
+                <p className="text-sm text-muted-foreground">
+                  Create a job, upload resumes, then score candidates to see
+                  your top matches.
+                </p>
+              </div>
+              <Button asChild size="sm">
+                <Link href="/jobs/new">
+                  <Plus className="size-4" /> Create a job
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Right column: recent activity */}
-        <div className="space-y-5">
-          <FadeIn delay={0.1}>
-            <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.amber)}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <SectionTitle
-                  icon={Activity}
-                  tint="bg-amber-500/10 text-amber-500"
-                  title="Recent activity"
-                />
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/activity">
-                    All <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <ActivityFeed items={stats.recentActivity} />
-              </CardContent>
-            </Card>
-          </FadeIn>
-        </div>
+        <FadeIn delay={0.1} className="h-full">
+          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.amber)}>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <SectionTitle
+                icon={Activity}
+                tint="bg-amber-500/10 text-amber-500"
+                title="Recent activity"
+              />
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/activity">
+                  All <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <ActivityFeed items={stats.recentActivity} />
+            </CardContent>
+          </Card>
+        </FadeIn>
       </div>
+
+      {/* Recent uploads — full width */}
+      <FadeIn delay={0.05}>
+        <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.cyan)}>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <SectionTitle
+              icon={UploadCloud}
+              tint="bg-cyan-500/10 text-cyan-500"
+              title="Recent uploads"
+              description="Latest resumes added to your workspace"
+            />
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/candidates">
+                All <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <RecentUploads items={stats.recentUploads} />
+          </CardContent>
+        </Card>
+      </FadeIn>
 
       {/* Quick actions */}
       <Card className={cn("transition-all duration-200", CARD_HOVER.primary)}>

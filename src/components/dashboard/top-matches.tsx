@@ -18,7 +18,7 @@ type TopMatch = Score & { candidate: Candidate; job: Job };
 
 export function TopMatches({ matches }: { matches: TopMatch[] }) {
   return (
-    <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.amber)}>
+    <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.amber)}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
