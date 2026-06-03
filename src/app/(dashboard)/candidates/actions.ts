@@ -104,6 +104,21 @@ const DIRECTORY_SELECT = {
       job: { select: { title: true } },
     },
   },
+  // Recruiter-uploaded candidates won't have an Application row, but if they've
+  // been scheduled for an interview we know which job they're for.
+  interviews: {
+    select: { jobId: true, job: { select: { title: true } } },
+    orderBy: { scheduledAt: "desc" },
+    take: 1,
+  },
+  // Last resort: if neither Application nor Interview exists, look at the
+  // top-scoring job — only used when the candidate has clearly been matched
+  // to a specific role (overallScore >= 50) so we don't mislabel pure uploads.
+  scores: {
+    select: { jobId: true, overallScore: true, job: { select: { title: true } } },
+    orderBy: { overallScore: "desc" },
+    take: 1,
+  },
   user: { select: { fullName: true, email: true } },
 } as const;
 
@@ -137,14 +152,33 @@ export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> 
   return Array.from(groups.values()).map((bucket) => {
     // The bucket is already sorted by uploadedAt desc thanks to the query.
     const latest = bucket[0];
-    const applications: CandidateApplication[] = bucket.map((r) => ({
-      candidateId: r.id,
-      jobId: r.application?.jobId ?? null,
-      jobTitle: r.application?.job?.title ?? null,
-      stage: r.stage,
-      status: r.status,
-      uploadedAt: r.uploadedAt,
-    }));
+    const applications: CandidateApplication[] = bucket.map((r) => {
+      // Resolve the job association for this candidate row, in order of strength:
+      //  1. Portal Application (the canonical "applied to" link).
+      //  2. Most recent Interview (recruiter scheduled them for a specific job).
+      //  3. Top-scoring Score row IF it cleared a confidence threshold —
+      //     a candidate matched to a job but neither applied nor interviewed.
+      // Falls through to null only for true pure uploads with no job context.
+      const topScore = r.scores[0];
+      const scoreClearedThreshold =
+        topScore && topScore.overallScore != null && topScore.overallScore >= 50;
+      const jobId =
+        r.application?.jobId ??
+        r.interviews[0]?.jobId ??
+        (scoreClearedThreshold ? topScore.jobId : null);
+      const jobTitle =
+        r.application?.job?.title ??
+        r.interviews[0]?.job?.title ??
+        (scoreClearedThreshold ? topScore.job.title : null);
+      return {
+        candidateId: r.id,
+        jobId,
+        jobTitle,
+        stage: r.stage,
+        status: r.status,
+        uploadedAt: r.uploadedAt,
+      };
+    });
 
     const stagesSet = new Set(applications.map((a) => a.stage));
     const stages = Array.from(stagesSet);
