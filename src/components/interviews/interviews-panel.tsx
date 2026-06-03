@@ -141,11 +141,13 @@ function panelEligible(
   currentUserId: string,
   currentUserRole: string,
 ): OrgMember[] {
-  // Admins may only schedule for themselves alone. Non-admin schedulers
-  // see everyone except admins. Admin schedulers see only themselves (so
-  // the panel checkbox naturally enforces the "solo" constraint).
+  // Recruiters and managers can always be assigned to a panel. Other admins
+  // never can. An admin scheduler additionally sees themselves, so they can
+  // assign the interview to recruiters/managers and optionally join the panel.
   if (currentUserRole === ROLE_ADMIN_STR) {
-    return members.filter((m) => m.id === currentUserId);
+    return members.filter(
+      (m) => m.role !== ROLE_ADMIN_STR || m.id === currentUserId,
+    );
   }
   return members.filter((m) => m.role !== ROLE_ADMIN_STR);
 }
@@ -169,7 +171,7 @@ function PanelPicker({
       <Label>Panel</Label>
       <p className="text-xs text-muted-foreground">
         {currentUserRole === ROLE_ADMIN_STR
-          ? "As an Admin, you can only schedule interviews you'll conduct yourself."
+          ? "Assign one or more recruiters or managers to conduct this interview — you can include yourself too."
           : "Admins can't be added to interview panels."}
       </p>
       {eligible.length === 0 ? (
