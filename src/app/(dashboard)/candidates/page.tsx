@@ -15,7 +15,7 @@ export default async function CandidatesPage() {
     <div>
       <PageHeader
         title="Candidates"
-        description="Every person who's applied to your jobs, deduplicated and organized."
+        description="People who've applied to your jobs through the portal, deduplicated by email."
       >
         <Button asChild>
           <Link href="/upload">
