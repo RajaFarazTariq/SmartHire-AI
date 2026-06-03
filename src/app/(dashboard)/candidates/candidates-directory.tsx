@@ -183,14 +183,15 @@ export function CandidatesDirectory({
             <Users className="size-6" />
           </span>
           <div>
-            <p className="font-medium">No candidates yet</p>
+            <p className="font-medium">No applicants yet</p>
             <p className="text-sm text-muted-foreground">
-              Upload resumes to start building your candidate pool.
+              People who apply to your jobs through the candidate portal will
+              appear here. Resumes you upload directly live in your talent pool.
             </p>
           </div>
           <Button asChild>
-            <Link href="/upload">
-              <UploadCloud className="size-4" /> Upload resumes
+            <Link href="/jobs">
+              <UploadCloud className="size-4" /> View jobs
             </Link>
           </Button>
         </CardContent>
@@ -499,7 +500,7 @@ function CandidateRow({
                 <Link href={`/candidates/${a.candidateId}`}>
                   <span className="flex w-full items-center justify-between gap-2">
                     <span className="truncate text-sm font-medium">
-                      {a.jobTitle ?? "Direct upload"}
+                      {a.jobTitle ?? "Untitled job"}
                     </span>
                     <Badge
                       className={cn(
