@@ -1,17 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, UserPlus, Mail, MapPin, X, FileText } from "lucide-react";
+import Image from "next/image";
+import { Users, Search, X, Mail, Briefcase, Crown } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/activity-meta";
 import type { MemberRow } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
-function displayName(m: MemberRow) {
-  return m.fullName ?? m.username ?? m.email.split("@")[0];
-}
+// Role badge colours, keyed by the role label.
+const ROLE_STYLES: Record<string, string> = {
+  Admin: "bg-purple-500/15 text-purple-600 dark:text-purple-300",
+  Manager: "bg-blue-500/15 text-blue-600 dark:text-blue-300",
+  Recruiter: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+  Member: "bg-muted text-muted-foreground",
+  Hired: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+};
+
+// Order the filter pills sensibly (staff by rank, then Hired).
+const ROLE_ORDER = ["Admin", "Manager", "Recruiter", "Member", "Hired"];
 
 function initials(name: string) {
   return (
@@ -23,37 +33,47 @@ function initials(name: string) {
   );
 }
 
-const SKILLS_SHOWN = 4;
-
 export function MembersList({ members }: { members: MemberRow[] }) {
   const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<string>("All");
+
+  const roleCounts = useMemo(() => {
+    const counts: Record<string, number> = { All: members.length };
+    for (const m of members) counts[m.role] = (counts[m.role] ?? 0) + 1;
+    return counts;
+  }, [members]);
+
+  const roles = useMemo(
+    () => ROLE_ORDER.filter((r) => (roleCounts[r] ?? 0) > 0),
+    [roleCounts],
+  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return members;
     return members.filter((m) => {
+      if (roleFilter !== "All" && m.role !== roleFilter) return false;
+      if (!q) return true;
       return (
-        displayName(m).toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q) ||
-        (m.headline?.toLowerCase().includes(q) ?? false) ||
-        (m.location?.toLowerCase().includes(q) ?? false) ||
-        m.skills.some((s) => s.toLowerCase().includes(q))
+        m.name.toLowerCase().includes(q) ||
+        (m.email?.toLowerCase().includes(q) ?? false) ||
+        (m.jobTitle?.toLowerCase().includes(q) ?? false) ||
+        m.role.toLowerCase().includes(q)
       );
     });
-  }, [members, query]);
+  }, [members, query, roleFilter]);
 
   if (members.length === 0) {
     return (
       <Card className="border-dashed">
         <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
           <span className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-            <UserPlus className="size-6" />
+            <Users className="size-6" />
           </span>
           <div>
             <p className="font-medium">No members yet</p>
             <p className="text-sm text-muted-foreground">
-              People who sign up through the candidate portal appear here until
-              they apply to their first job — then they move to Candidates.
+              People in your organization and anyone you&apos;ve hired will
+              appear here.
             </p>
           </div>
         </CardContent>
@@ -70,7 +90,7 @@ export function MembersList({ members }: { members: MemberRow[] }) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, email, headline, location, or skill…"
+            placeholder="Search by name, email, role, or job…"
             className="pl-9"
           />
           {query && (
@@ -89,16 +109,35 @@ export function MembersList({ members }: { members: MemberRow[] }) {
         </p>
       </div>
 
-      {/* Table */}
+      {/* Role filter */}
+      <div className="flex flex-wrap gap-1.5">
+        {["All", ...roles].map((r) => (
+          <button
+            key={r}
+            onClick={() => setRoleFilter(r)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+              roleFilter === r
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-transparent bg-muted text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {r}
+            <span className="ml-1.5 opacity-70">{roleCounts[r] ?? 0}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Roster table */}
       <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-3 py-2.5">Member</th>
-                <th className="hidden px-3 py-2.5 lg:table-cell">Skills</th>
-                <th className="hidden px-3 py-2.5 sm:table-cell">Resume</th>
-                <th className="px-3 py-2.5">Joined</th>
+                <th className="px-3 py-2.5">Role</th>
+                <th className="hidden px-3 py-2.5 md:table-cell">Hired for</th>
+                <th className="hidden px-3 py-2.5 sm:table-cell">Since</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -108,88 +147,84 @@ export function MembersList({ members }: { members: MemberRow[] }) {
                     colSpan={4}
                     className="px-3 py-12 text-center text-sm text-muted-foreground"
                   >
-                    No members match your search.
+                    No members match your filters.
                   </td>
                 </tr>
               ) : (
-                visible.map((m) => {
-                  const name = displayName(m);
-                  const extra = Math.max(0, m.skills.length - SKILLS_SHOWN);
-                  return (
-                    <tr key={m.id} className="transition-colors hover:bg-accent/30">
-                      {/* Identity */}
-                      <td className="px-3 py-2.5 align-top">
-                        <div className="flex items-start gap-3">
+                visible.map((m) => (
+                  <tr
+                    key={`${m.kind}:${m.id}`}
+                    className="transition-colors hover:bg-accent/30"
+                  >
+                    {/* Identity */}
+                    <td className="px-3 py-2.5 align-top">
+                      <div className="flex items-start gap-3">
+                        {m.imageUrl ? (
+                          <Image
+                            src={m.imageUrl}
+                            alt=""
+                            width={36}
+                            height={36}
+                            className="size-9 shrink-0 rounded-full object-cover"
+                          />
+                        ) : (
                           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                            {initials(name)}
+                            {initials(m.name)}
                           </span>
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-medium text-foreground">
-                              {name}
+                        )}
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-1.5">
+                            <span className="truncate text-sm font-medium text-foreground">
+                              {m.name}
                             </span>
-                            {m.headline && (
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {m.headline}
-                              </span>
+                            {m.isOriginalAdmin && (
+                              <Crown
+                                className="size-3.5 shrink-0 text-amber-500"
+                                aria-label="Organization founder"
+                              />
                             )}
+                          </span>
+                          {m.email && (
                             <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
                               <Mail className="size-3" />
                               <span className="truncate">{m.email}</span>
                             </span>
-                            {m.location && (
-                              <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                                <MapPin className="size-3" />
-                                <span className="truncate">{m.location}</span>
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Skills */}
-                      <td className="hidden px-3 py-2.5 align-top lg:table-cell">
-                        {m.skills.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1">
-                            {m.skills.slice(0, SKILLS_SHOWN).map((s) => (
-                              <Badge
-                                key={s}
-                                variant="secondary"
-                                className="font-normal"
-                              >
-                                {s}
-                              </Badge>
-                            ))}
-                            {extra > 0 && (
-                              <Badge variant="outline" className="font-normal">
-                                +{extra}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Resume */}
-                      <td className="hidden px-3 py-2.5 align-top sm:table-cell">
-                        {m.hasResume ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                            <FileText className="size-3.5" /> On file
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-
-                      {/* Joined */}
-                      <td className="px-3 py-2.5 align-top">
-                        <span className="text-xs text-muted-foreground">
-                          {timeAgo(m.createdAt)}
+                          )}
                         </span>
-                      </td>
-                    </tr>
-                  );
-                })
+                      </div>
+                    </td>
+
+                    {/* Role */}
+                    <td className="px-3 py-2.5 align-top">
+                      <Badge
+                        className={cn(
+                          "border-0",
+                          ROLE_STYLES[m.role] ?? "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {m.role}
+                      </Badge>
+                    </td>
+
+                    {/* Hired for */}
+                    <td className="hidden px-3 py-2.5 align-top md:table-cell">
+                      {m.jobTitle ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Briefcase className="size-3.5" /> {m.jobTitle}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+
+                    {/* Since */}
+                    <td className="hidden px-3 py-2.5 align-top sm:table-cell">
+                      <span className="text-xs text-muted-foreground">
+                        {m.since ? timeAgo(m.since) : "—"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
