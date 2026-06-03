@@ -2,13 +2,11 @@ import Link from "next/link";
 import {
   Plus,
   UploadCloud,
-  Users,
   Briefcase,
   ArrowRight,
   TrendingUp,
   GitBranch,
   BarChart3,
-  Activity,
   Filter,
 } from "lucide-react";
 
@@ -17,7 +15,6 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { DashboardInsights } from "@/components/dashboard/dashboard-insights";
 import { TopMatches } from "@/components/dashboard/top-matches";
-import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { ConversionFunnel } from "@/components/dashboard/conversion-funnel";
 import { RecentUploads } from "@/components/dashboard/recent-uploads";
 import {
@@ -27,7 +24,7 @@ import {
 } from "@/components/dashboard/charts-lazy";
 import { FadeIn } from "@/components/motion";
 import { cn } from "@/lib/utils";
-import { CARD_HOVER, CARD_HOVER_BASE, type CardAccent } from "@/lib/card-accents";
+import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -186,55 +183,6 @@ export default async function DashboardPage() {
         </FadeIn>
       </div>
 
-      {/* Top matches + recent activity — equal-height row */}
-      <div className="grid gap-5 lg:grid-cols-2">
-        {stats.topMatches.length > 0 ? (
-          <FadeIn delay={0.05} className="h-full">
-            <TopMatches matches={stats.topMatches} />
-          </FadeIn>
-        ) : (
-          <Card className="h-full border-dashed">
-            <CardContent className="flex h-full flex-col items-center justify-center gap-3 py-12 text-center">
-              <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Briefcase className="size-5" />
-              </span>
-              <div>
-                <p className="font-medium">No matches yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Create a job, upload resumes, then score candidates to see
-                  your top matches.
-                </p>
-              </div>
-              <Button asChild size="sm">
-                <Link href="/jobs/new">
-                  <Plus className="size-4" /> Create a job
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        <FadeIn delay={0.1} className="h-full">
-          <Card className={cn("h-full", CARD_HOVER_BASE, CARD_HOVER.amber)}>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <SectionTitle
-                icon={Activity}
-                tint="bg-amber-500/10 text-amber-500"
-                title="Recent activity"
-              />
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/activity">
-                  All <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <ActivityFeed items={stats.recentActivity} />
-            </CardContent>
-          </Card>
-        </FadeIn>
-      </div>
-
       {/* Recent uploads — full width */}
       <FadeIn delay={0.05}>
         <Card className={cn(CARD_HOVER_BASE, CARD_HOVER.cyan)}>
@@ -257,80 +205,32 @@ export default async function DashboardPage() {
         </Card>
       </FadeIn>
 
-      {/* Quick actions */}
-      <Card className={cn("transition-all duration-200", CARD_HOVER.primary)}>
-        <CardHeader>
-          <CardTitle>Quick actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <QuickAction
-            href="/jobs/new"
-            icon={Plus}
-            label="Post a job"
-            tile="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-            accent="blue"
-          />
-          <QuickAction
-            href="/upload"
-            icon={UploadCloud}
-            label="Upload resumes"
-            tile="bg-violet-500/10 text-violet-600 dark:text-violet-400"
-            accent="violet"
-          />
-          <QuickAction
-            href="/candidates"
-            icon={Users}
-            label="View candidates"
-            tile="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-            accent="emerald"
-          />
-          <QuickAction
-            href="/jobs"
-            icon={Briefcase}
-            label="Manage jobs"
-            tile="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-            accent="amber"
-          />
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function QuickAction({
-  href,
-  icon: Icon,
-  label,
-  tile,
-  accent,
-}: {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-  tile: string;
-  accent: CardAccent;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex items-center justify-between rounded-lg border bg-card p-3",
-        CARD_HOVER_BASE,
-        CARD_HOVER[accent],
+      {/* Top AI matches — full-width rectangle */}
+      {stats.topMatches.length > 0 ? (
+        <FadeIn delay={0.1}>
+          <TopMatches matches={stats.topMatches} />
+        </FadeIn>
+      ) : (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
+            <span className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <Briefcase className="size-5" />
+            </span>
+            <div>
+              <p className="font-medium">No matches yet</p>
+              <p className="text-sm text-muted-foreground">
+                Create a job, upload resumes, then score candidates to see your
+                top matches.
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link href="/jobs/new">
+                <Plus className="size-4" /> Create a job
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       )}
-    >
-      <span className="flex items-center gap-2.5">
-        <span
-          className={cn(
-            "flex size-8 items-center justify-center rounded-md transition-transform group-hover:scale-105",
-            tile,
-          )}
-        >
-          <Icon className="size-4" />
-        </span>
-        <span className="text-sm font-medium">{label}</span>
-      </span>
-      <ArrowRight className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-    </Link>
+    </div>
   );
 }
