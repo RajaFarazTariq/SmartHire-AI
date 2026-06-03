@@ -83,8 +83,6 @@ export type CandidateDirectoryRow = {
   primaryStage: string;
   /** When the most recent application was uploaded — used for "last activity". */
   lastActivity: Date;
-  uploaderId: string;
-  uploaderName: string | null;
 };
 
 const DIRECTORY_SELECT = {
@@ -97,7 +95,6 @@ const DIRECTORY_SELECT = {
   status: true,
   extractedSkills: true,
   uploadedAt: true,
-  userId: true,
   application: {
     select: {
       applicantId: true,
@@ -108,7 +105,6 @@ const DIRECTORY_SELECT = {
       applicant: { select: { fullName: true, email: true } },
     },
   },
-  user: { select: { fullName: true, email: true } },
 } as const;
 
 export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> {
@@ -188,8 +184,6 @@ export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> 
       stages,
       primaryStage,
       lastActivity: latest.uploadedAt,
-      uploaderId: latest.userId,
-      uploaderName: latest.user?.fullName ?? latest.user?.email ?? null,
     };
   });
 }

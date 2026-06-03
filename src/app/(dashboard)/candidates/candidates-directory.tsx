@@ -326,7 +326,6 @@ export function CandidatesDirectory({
                 <th className="hidden px-3 py-2.5 lg:table-cell">Skills</th>
                 <th className="px-3 py-2.5">Applications</th>
                 <th className="px-3 py-2.5">Stage</th>
-                <th className="hidden px-3 py-2.5 xl:table-cell">Recruiter</th>
                 <th className="hidden px-3 py-2.5 md:table-cell">
                   Last activity
                 </th>
@@ -337,7 +336,7 @@ export function CandidatesDirectory({
               {paged.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-3 py-12 text-center text-sm text-muted-foreground"
                   >
                     No candidates match your filters.
@@ -540,13 +539,6 @@ function CandidateRow({
             </Badge>
           )}
         </div>
-      </td>
-
-      {/* Recruiter */}
-      <td className="hidden px-3 py-2.5 align-top xl:table-cell">
-        <span className="text-xs text-muted-foreground">
-          {c.uploaderName ?? "—"}
-        </span>
       </td>
 
       {/* Last activity */}
