@@ -28,12 +28,17 @@ const MAX_BYTES = 4 * 1024 * 1024;
 export function ApplyForm({
   jobId,
   defaults,
+  profileResume,
 }: {
   jobId: string;
   defaults: { linkedinUrl: string; githubUrl: string; portfolioUrl: string };
+  /** The resume already saved on the applicant's profile, if any. */
+  profileResume: { name: string; type: string } | null;
 }) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
+  // Reuse the profile resume by default when one exists (no re-upload needed).
+  const [useProfile, setUseProfile] = useState(Boolean(profileResume));
   const [pending, setPending] = useState(false);
   const [coverNote, setCoverNote] = useState("");
   const [linkedinUrl, setLinkedinUrl] = useState(defaults.linkedinUrl);
@@ -59,16 +64,22 @@ export function ApplyForm({
     },
   });
 
+  const usingProfileResume = !file && useProfile && Boolean(profileResume);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) {
+    if (!file && !usingProfileResume) {
       toast.error("Please attach your resume.");
       return;
     }
     setPending(true);
 
     const fd = new FormData();
-    fd.set("file", file);
+    if (file) {
+      fd.set("file", file);
+    } else {
+      fd.set("useProfileResume", "true");
+    }
     fd.set("coverNote", coverNote);
     fd.set("linkedinUrl", linkedinUrl);
     fd.set("githubUrl", githubUrl);
@@ -106,7 +117,10 @@ export function ApplyForm({
               <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
               <button
                 type="button"
-                onClick={() => setFile(null)}
+                onClick={() => {
+                  setFile(null);
+                  if (profileResume) setUseProfile(true);
+                }}
                 disabled={pending}
                 className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 aria-label="Remove file"
@@ -115,26 +129,67 @@ export function ApplyForm({
               </button>
             </CardContent>
           </Card>
+        ) : usingProfileResume && profileResume ? (
+          <Card className="gap-0 p-0">
+            <CardContent className="flex items-center gap-3 p-4">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <FileText className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">
+                  {profileResume.name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {profileResume.type
+                    ? `${profileResume.type.toUpperCase()} · `
+                    : ""}
+                  from your profile
+                </p>
+              </div>
+              <CheckCircle2 className="size-5 shrink-0 text-emerald-500" />
+              <button
+                type="button"
+                onClick={() => setUseProfile(false)}
+                disabled={pending}
+                className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                Use a different file
+              </button>
+            </CardContent>
+          </Card>
         ) : (
-          <div
-            {...getRootProps()}
-            className={cn(
-              "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors",
-              isDragActive
-                ? "border-primary bg-primary/5"
-                : "border-input hover:border-primary/40 hover:bg-accent/40",
+          <div className="space-y-2">
+            <div
+              {...getRootProps()}
+              className={cn(
+                "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors",
+                isDragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-input hover:border-primary/40 hover:bg-accent/40",
+              )}
+            >
+              <input {...getInputProps()} />
+              <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <UploadCloud className="size-5" />
+              </span>
+              <p className="text-sm font-medium">
+                {isDragActive
+                  ? "Drop your resume here"
+                  : "Drag & drop your resume"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                PDF or DOCX, up to 4 MB
+              </p>
+            </div>
+            {profileResume && (
+              <button
+                type="button"
+                onClick={() => setUseProfile(true)}
+                className="text-xs font-medium text-primary transition-colors hover:underline"
+              >
+                Or use your profile resume ({profileResume.name})
+              </button>
             )}
-          >
-            <input {...getInputProps()} />
-            <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <UploadCloud className="size-5" />
-            </span>
-            <p className="text-sm font-medium">
-              {isDragActive ? "Drop your resume here" : "Drag & drop your resume"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              PDF or DOCX, up to 4 MB
-            </p>
           </div>
         )}
       </div>
@@ -193,7 +248,11 @@ export function ApplyForm({
       </div>
 
       <div className="flex items-center gap-3">
-        <Button type="submit" size="lg" disabled={pending || !file}>
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending || (!file && !usingProfileResume)}
+        >
           {pending ? (
             <>
               <Loader2 className="size-4 animate-spin" /> Submitting…

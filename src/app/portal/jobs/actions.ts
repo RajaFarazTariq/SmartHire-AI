@@ -1,11 +1,15 @@
 "use server";
 
-import { put } from "@vercel/blob";
+import { put, get } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { requireDbUser } from "@/lib/auth";
-import { detectFileType, extractResumeText } from "@/lib/parsers";
+import {
+  detectFileType,
+  extractResumeText,
+  type ResumeFileType,
+} from "@/lib/parsers";
 import { processCandidate } from "@/lib/extraction";
 import { logActivity } from "@/lib/activity";
 import { createNotification } from "@/lib/notify";
@@ -100,18 +104,6 @@ export async function applyToJobAction(
     return { ok: false, error: "You've already applied to this job." };
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Please attach your resume." };
-  }
-  if (file.size > MAX_FILE_BYTES) {
-    return { ok: false, error: "File too large (max 4 MB)." };
-  }
-  const fileType = detectFileType(file.name, file.type);
-  if (!fileType) {
-    return { ok: false, error: "Only PDF and DOCX files are supported." };
-  }
-
   const coverNote = (formData.get("coverNote") as string | null)?.trim() || null;
   const linkedinUrl = (formData.get("linkedinUrl") as string | null)?.trim() || null;
   const githubUrl = (formData.get("githubUrl") as string | null)?.trim() || null;
@@ -121,7 +113,58 @@ export async function applyToJobAction(
     where: { userId: user.id },
   });
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  // Resume bytes come from either a freshly uploaded file or — when the
+  // applicant opts to reuse it — the resume already saved on their profile.
+  const file = formData.get("file");
+  const useProfileResume = formData.get("useProfileResume") === "true";
+
+  let buffer: Buffer;
+  let fileType: ResumeFileType;
+  let filename: string;
+  let contentTypeHint: string | undefined;
+
+  if (file instanceof File && file.size > 0) {
+    if (file.size > MAX_FILE_BYTES) {
+      return { ok: false, error: "File too large (max 4 MB)." };
+    }
+    const ft = detectFileType(file.name, file.type);
+    if (!ft) {
+      return { ok: false, error: "Only PDF and DOCX files are supported." };
+    }
+    fileType = ft;
+    filename = file.name;
+    contentTypeHint = file.type || undefined;
+    buffer = Buffer.from(await file.arrayBuffer());
+  } else if (useProfileResume) {
+    const ft =
+      profile?.resumeType === "pdf" || profile?.resumeType === "docx"
+        ? profile.resumeType
+        : null;
+    if (!profile?.resumeUrl || !ft) {
+      return {
+        ok: false,
+        error: "No usable resume on your profile. Please attach a file.",
+      };
+    }
+    try {
+      const result = await get(profile.resumeUrl, { access: "private" });
+      if (!result || result.statusCode !== 200) {
+        throw new Error(`blob fetch returned ${result?.statusCode}`);
+      }
+      buffer = Buffer.from(await new Response(result.stream).arrayBuffer());
+    } catch (err) {
+      console.error("applyToJobAction: profile resume fetch failed:", err);
+      return {
+        ok: false,
+        error: "Couldn't load your profile resume. Please attach a file instead.",
+      };
+    }
+    fileType = ft;
+    filename = profile.resumeName ?? `resume.${ft}`;
+  } else {
+    return { ok: false, error: "Please attach your resume." };
+  }
+
   let rawText: string;
   try {
     rawText = await extractResumeText(buffer, fileType);
@@ -129,10 +172,11 @@ export async function applyToJobAction(
     return { ok: false, error: "Could not read that file. Try another." };
   }
 
-  const blob = await put(`resumes/${job.orgId ?? "public"}/${file.name}`, buffer, {
+  const blob = await put(`resumes/${job.orgId ?? "public"}/${filename}`, buffer, {
     access: "private",
     addRandomSuffix: true,
-    contentType: file.type || (fileType === "pdf" ? "application/pdf" : undefined),
+    contentType:
+      contentTypeHint ?? (fileType === "pdf" ? "application/pdf" : undefined),
   });
 
   const candidate = await prisma.candidate.create({
@@ -142,7 +186,7 @@ export async function applyToJobAction(
       fullName: user.fullName ?? null,
       email: user.email,
       phone: profile?.phone ?? null,
-      filename: file.name,
+      filename,
       fileUrl: blob.url,
       fileType,
       rawText,
