@@ -53,6 +53,149 @@ export async function getUserCandidates(): Promise<CandidateListItem[]> {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Directory view — one row per real person, with their applications nested.
+// ---------------------------------------------------------------------------
+
+export type CandidateApplication = {
+  candidateId: string;
+  jobId: string | null;
+  jobTitle: string | null;
+  stage: string;
+  status: string;
+  uploadedAt: Date;
+};
+
+export type CandidateDirectoryRow = {
+  /** Latest candidate row id — used as the route target for "View profile". */
+  primaryId: string;
+  /** Stable dedup key: email lowercased; falls back to fullName-lowercased; else the row id. */
+  dedupKey: string;
+  fullName: string | null;
+  email: string | null;
+  currentTitle: string | null;
+  yearsExperience: number | null;
+  extractedSkills: string[];
+  applications: CandidateApplication[];
+  /** Distinct stages across all applications, ordered by pipeline progression. */
+  stages: string[];
+  /** Most-advanced (= highest pipeline-index) stage across applications. */
+  primaryStage: string;
+  /** When the most recent application was uploaded — used for "last activity". */
+  lastActivity: Date;
+  uploaderId: string;
+  uploaderName: string | null;
+};
+
+const DIRECTORY_SELECT = {
+  id: true,
+  fullName: true,
+  email: true,
+  currentTitle: true,
+  yearsExperience: true,
+  stage: true,
+  status: true,
+  extractedSkills: true,
+  uploadedAt: true,
+  userId: true,
+  application: {
+    select: {
+      jobId: true,
+      job: { select: { title: true } },
+    },
+  },
+  user: { select: { fullName: true, email: true } },
+} as const;
+
+export async function getCandidateDirectory(): Promise<CandidateDirectoryRow[]> {
+  const { orgId } = await requireWorkspace();
+  const rows = await prisma.candidate.findMany({
+    where: { orgId },
+    orderBy: { uploadedAt: "desc" },
+    select: DIRECTORY_SELECT,
+  });
+
+  // Resolve a stable dedup key for each row. Email wins (most reliable);
+  // fall back to lowercased fullName so people without email still group;
+  // last resort = the row id (no grouping).
+  function keyFor(r: (typeof rows)[number]): string {
+    const e = r.email?.trim().toLowerCase();
+    if (e) return `e:${e}`;
+    const n = r.fullName?.trim().toLowerCase();
+    if (n) return `n:${n}`;
+    return `id:${r.id}`;
+  }
+
+  const groups = new Map<string, (typeof rows)[number][]>();
+  for (const r of rows) {
+    const k = keyFor(r);
+    const bucket = groups.get(k);
+    if (bucket) bucket.push(r);
+    else groups.set(k, [r]);
+  }
+
+  return Array.from(groups.values()).map((bucket) => {
+    // The bucket is already sorted by uploadedAt desc thanks to the query.
+    const latest = bucket[0];
+    const applications: CandidateApplication[] = bucket.map((r) => ({
+      candidateId: r.id,
+      jobId: r.application?.jobId ?? null,
+      jobTitle: r.application?.job?.title ?? null,
+      stage: r.stage,
+      status: r.status,
+      uploadedAt: r.uploadedAt,
+    }));
+
+    const stagesSet = new Set(applications.map((a) => a.stage));
+    const stages = Array.from(stagesSet);
+    // Pick the most-advanced stage (highest index) — Hired beats Final Review,
+    // which beats Shortlisted, etc. Rejected is treated as terminal-low so it
+    // doesn't outrank an in-progress stage.
+    const rank = (s: string) => {
+      const idx = (PIPELINE_STAGES_ORDER as readonly string[]).indexOf(s);
+      return idx === -1 ? -1 : idx;
+    };
+    const primaryStage =
+      stages
+        .filter((s) => s !== "Rejected")
+        .sort((a, b) => rank(b) - rank(a))[0] ?? stages[0] ?? latest.stage;
+
+    // Pick the freshest non-null skill list. Skills get re-extracted on each
+    // upload, so latest is typically the best representation.
+    const extractedSkills =
+      bucket.find((r) => r.extractedSkills.length > 0)?.extractedSkills ?? [];
+
+    return {
+      primaryId: latest.id,
+      dedupKey: keyFor(latest),
+      fullName: latest.fullName,
+      email: latest.email,
+      currentTitle: latest.currentTitle,
+      yearsExperience: latest.yearsExperience,
+      extractedSkills,
+      applications,
+      stages,
+      primaryStage,
+      lastActivity: latest.uploadedAt,
+      uploaderId: latest.userId,
+      uploaderName: latest.user?.fullName ?? latest.user?.email ?? null,
+    };
+  });
+}
+
+// Inline copy of PIPELINE_STAGES order so we don't churn imports through the
+// big actions.ts header. Kept in sync with src/lib/pipeline.ts manually.
+const PIPELINE_STAGES_ORDER = [
+  "Applied",
+  "Under Review",
+  "Shortlisted",
+  "Interview Scheduled",
+  "Technical Assessment",
+  "Final Review",
+  "Hired",
+  "Rejected",
+] as const;
+
 export async function getCandidate(id: string) {
   const { orgId } = await requireWorkspace();
   return prisma.candidate.findFirst({ where: { id, orgId } });

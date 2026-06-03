@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { UploadCloud } from "lucide-react";
 
-import { getUserCandidates } from "./actions";
-import { CandidatesList } from "./candidates-list";
+import { getCandidateDirectory } from "./actions";
+import { CandidatesDirectory } from "./candidates-directory";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 export default async function CandidatesPage() {
-  const candidates = await getUserCandidates();
+  const candidates = await getCandidateDirectory();
 
   return (
     <div>
       <PageHeader
         title="Candidates"
-        description="Resumes you've uploaded and parsed."
+        description="Every person who's applied to your jobs, deduplicated and organized."
       >
         <Button asChild>
           <Link href="/upload">
@@ -21,7 +23,7 @@ export default async function CandidatesPage() {
           </Link>
         </Button>
       </PageHeader>
-      <CandidatesList candidates={candidates} />
+      <CandidatesDirectory candidates={candidates} />
     </div>
   );
 }
