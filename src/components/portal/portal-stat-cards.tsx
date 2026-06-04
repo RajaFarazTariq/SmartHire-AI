@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CARD_HOVER, type CardAccent } from "@/lib/card-accents";
 import { Card } from "@/components/ui/card";
+import { Sparkline } from "@/components/ui/sparkline";
 import { AnimatedCounter } from "@/components/dashboard/animated-counter";
 
 export function PortalStatCards({
@@ -35,6 +36,7 @@ export function PortalStatCards({
     accent: CardAccent;
     tile: string;
     glow: string;
+    wave: string;
   }[] = [
     {
       label: "Applications",
@@ -44,6 +46,7 @@ export function PortalStatCards({
       accent: "blue",
       tile: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
       glow: "from-blue-500/10",
+      wave: "text-blue-500",
     },
     {
       label: "In review",
@@ -53,6 +56,7 @@ export function PortalStatCards({
       accent: "amber",
       tile: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
       glow: "from-amber-500/10",
+      wave: "text-amber-500",
     },
     {
       label: "Interviews",
@@ -62,6 +66,7 @@ export function PortalStatCards({
       accent: "violet",
       tile: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
       glow: "from-violet-500/10",
+      wave: "text-violet-500",
     },
     {
       label: "Offers",
@@ -71,6 +76,7 @@ export function PortalStatCards({
       accent: "emerald",
       tile: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
       glow: "from-emerald-500/10",
+      wave: "text-emerald-500",
     },
   ];
 
@@ -88,7 +94,7 @@ export function PortalStatCards({
             <Link href="/portal/applications" className="block h-full">
               <Card
                 className={cn(
-                  "group relative h-full gap-0 overflow-hidden py-5 transition-all duration-200 hover:-translate-y-0.5",
+                  "group relative h-full gap-0 overflow-hidden py-0 transition-all duration-200 hover:-translate-y-0.5",
                   CARD_HOVER[c.accent],
                 )}
               >
@@ -98,24 +104,37 @@ export function PortalStatCards({
                     c.glow,
                   )}
                 />
-                <div className="relative flex items-start justify-between px-5">
-                  <span
-                    className={cn(
-                      "flex size-10 items-center justify-center rounded-xl",
-                      c.tile,
-                    )}
-                  >
-                    <Icon className="size-5" />
-                  </span>
-                  <ArrowUpRight className="size-4 text-muted-foreground/50 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+                {/* Content (pb reserves room for the sparkline at the bottom) */}
+                <div className="relative z-10 px-5 pb-12 pt-5">
+                  <div className="flex items-start justify-between">
+                    <span
+                      className={cn(
+                        "flex size-10 items-center justify-center rounded-xl",
+                        c.tile,
+                      )}
+                    >
+                      <Icon className="size-5" />
+                    </span>
+                    <ArrowUpRight className="size-4 text-muted-foreground/50 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground" />
+                  </div>
+                  <div className="mt-3">
+                    <AnimatedCounter
+                      value={c.value}
+                      className="text-3xl font-bold tracking-tight tabular-nums"
+                    />
+                    <p className="mt-0.5 text-sm font-medium">{c.label}</p>
+                    <p className="text-xs text-muted-foreground">{c.sub}</p>
+                  </div>
                 </div>
-                <div className="relative mt-3 px-5">
-                  <AnimatedCounter
-                    value={c.value}
-                    className="text-3xl font-bold tracking-tight tabular-nums"
-                  />
-                  <p className="mt-0.5 text-sm font-medium">{c.label}</p>
-                  <p className="text-xs text-muted-foreground">{c.sub}</p>
+
+                {/* Soft accent gradient sparkline anchored to the bottom edge */}
+                <div
+                  className={cn(
+                    "pointer-events-none absolute inset-x-0 bottom-0 h-12",
+                    c.wave,
+                  )}
+                >
+                  <Sparkline index={i} id={`portal-spark-${i}`} />
                 </div>
               </Card>
             </Link>
