@@ -12,6 +12,7 @@ import {
 
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace, isOriginalAdmin as isOriginalAdminFor } from "@/lib/org";
+import { countOrgCandidates } from "@/lib/candidate-stats";
 import { isAdmin, roleLabel } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -51,7 +52,7 @@ export default async function OrganizationPage() {
   const [jobsCount, candidatesCount, pendingRequests, members, invitations] =
     await Promise.all([
       prisma.job.count({ where: { orgId } }),
-      prisma.candidate.count({ where: { orgId } }),
+      countOrgCandidates(orgId),
       prisma.organizationRequest.count({
         where: { orgId, status: "pending" },
       }),
@@ -61,8 +62,9 @@ export default async function OrganizationPage() {
 
   const stats = [
     {
+      // Prefer the real fetched roster length; fall back to Clerk's count.
       label: "Members",
-      value: memberCount,
+      value: members.length || memberCount,
       icon: Users,
       accent: "blue" as const,
       tile: "bg-blue-500/10 text-blue-600 dark:text-blue-400",

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
+import { countOrgCandidates } from "@/lib/candidate-stats";
 import { PIPELINE_STAGES, type PipelineStage } from "@/lib/pipeline";
 
 const SCORE_BUCKETS = [
@@ -37,7 +38,7 @@ export async function getDashboardStats() {
 
   const [
     jobCount,
-    distinctApplicantRows,
+    candidateCount,
     processingCount,
     readyCount,
     stageGroups,
@@ -49,14 +50,8 @@ export async function getDashboardStats() {
     recentUploads,
   ] = await Promise.all([
     prisma.job.count({ where }),
-    // "Candidates" = unique PEOPLE, not resume rows. One applicant who applied
-    // to N jobs has N candidate rows but is a single candidate — so we count
-    // distinct applicants, matching the Candidates page's account-based dedup.
-    prisma.application.findMany({
-      where: { candidate: { orgId } },
-      distinct: ["applicantId"],
-      select: { applicantId: true },
-    }),
+    // "Candidates" = unique PEOPLE (distinct applicants), not resume rows.
+    countOrgCandidates(orgId),
     prisma.candidate.count({ where: { ...where, status: "processing" } }),
     prisma.candidate.count({ where: { ...where, status: "ready" } }),
     prisma.candidate.groupBy({
@@ -121,8 +116,6 @@ export async function getDashboardStats() {
       }
     }
   }
-  const candidateCount = distinctApplicantRows.length;
-
   const weeklyTrend = weekBuckets.map((b) => ({ week: b.week, count: b.count }));
   const thisWeekUploads = weekBuckets[TREND_WEEKS - 1].count;
   const lastWeekUploads = weekBuckets[TREND_WEEKS - 2].count;
