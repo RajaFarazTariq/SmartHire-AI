@@ -203,8 +203,10 @@ export function FilterBar<T>({
     setOpen(false);
   }
 
+  const hasDraftValue = draft.some((r) => r.value !== "");
+
   return (
-    <>
+    <div className="inline-flex items-center gap-1">
       <Button
         variant="outline"
         size="sm"
@@ -223,6 +225,18 @@ export function FilterBar<T>({
           </span>
         )}
       </Button>
+      {count > 0 && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={() => onChange([])}
+          aria-label="Clear filters"
+          title="Clear filters"
+        >
+          <X className="size-4" />
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -313,6 +327,15 @@ export function FilterBar<T>({
           </div>
 
           <DialogFooter>
+            {hasDraftValue && (
+              <Button
+                variant="ghost"
+                onClick={() => setDraft([blankRule(fields)])}
+                className="mr-auto text-muted-foreground hover:text-foreground"
+              >
+                Clear all
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
@@ -320,7 +343,7 @@ export function FilterBar<T>({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 
