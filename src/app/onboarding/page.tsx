@@ -1,13 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { OrganizationList } from "@clerk/nextjs";
-import { Search, ArrowRight } from "lucide-react";
 
 import { Brand } from "@/components/brand";
 import { requireDbUser } from "@/lib/auth";
 import { CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
 import { getActiveOrgId, hasOrgMembership } from "@/lib/access";
 import { hasPendingJoinRequest } from "./actions";
+import { OrgChooser } from "./org-chooser";
 
 export default async function OnboardingPage() {
   const user = await requireDbUser();
@@ -35,35 +33,7 @@ export default async function OnboardingPage() {
         </p>
       </div>
 
-      <OrganizationList
-        hidePersonal
-        afterCreateOrganizationUrl="/dashboard"
-        afterSelectOrganizationUrl="/dashboard"
-      />
-
-      <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
-        <span className="h-px w-12 bg-border" />
-        OR
-        <span className="h-px w-12 bg-border" />
-      </div>
-
-      <Link
-        href="/onboarding/join"
-        className="group flex w-full max-w-sm items-center gap-3 rounded-xl border bg-card p-4 transition-all hover:border-primary/40 hover:shadow-sm hover:shadow-primary/15"
-      >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Search className="size-5" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">
-            Join an existing organization
-          </span>
-          <span className="block text-xs text-muted-foreground">
-            Search for your team and send a request to its admin.
-          </span>
-        </span>
-        <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-      </Link>
+      <OrgChooser />
     </div>
   );
 }
