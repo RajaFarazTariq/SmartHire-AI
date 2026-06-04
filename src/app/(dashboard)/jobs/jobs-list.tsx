@@ -11,13 +11,27 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { JobCardMenu } from "./job-card-menu";
 import type { JobListItem } from "./actions";
 
 const PAGE_SIZE = 12;
+
+// Restrained accent rotation within the existing palette: brand blue, muted
+// purple, muted teal. Bar = solid left edge; avatar = matching tint.
+const ACCENTS = [
+  { bar: "bg-primary", avatar: "bg-primary/10 text-primary" },
+  {
+    bar: "bg-violet-500",
+    avatar: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
+  {
+    bar: "bg-teal-500",
+    avatar: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+  },
+];
 
 export function JobsList({ jobs }: { jobs: JobListItem[] }) {
   const [query, setQuery] = useState("");
@@ -91,44 +105,70 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
           No jobs match “{query}”.
         </p>
       ) : (
-        <div className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-card">
+        <div className="space-y-3">
           {paged.map((job, i) => {
             const initial = job.company?.trim()?.[0]?.toUpperCase();
+            const accent = ACCENTS[i % ACCENTS.length];
+            const skills = job.requiredSkills;
+            const extra = skills.length - 3;
             return (
               <motion.div
                 key={job.id}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.25) }}
               >
-                <div className="group relative flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-primary/[0.04]">
-                  {/* Accent indicator on hover (brand colour) */}
+                {/* Whole card is the link — no menu on the row, so no stacking
+                    needed. Edit/delete stay on the job detail page. */}
+                <Link
+                  href={`/jobs/${job.id}`}
+                  className="group relative flex items-center gap-3.5 overflow-hidden rounded-lg border border-border/60 bg-card/60 py-3 pl-6 pr-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10"
+                >
+                  {/* 4px solid accent bar — always visible */}
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute inset-y-0 left-0 w-0.5 bg-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100"
-                  />
-                  {/* Stretched link keeps the whole row clickable (under the menu).
-                      Siblings stay un-positioned so the link paints on top. */}
-                  <Link
-                    href={`/jobs/${job.id}`}
-                    aria-label={job.title}
-                    className="absolute inset-0 z-0"
+                    className={cn(
+                      "absolute inset-y-0 left-0 w-1",
+                      accent.bar,
+                    )}
                   />
 
-                  {/* Icon anchor — company initial, else a job glyph */}
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary">
-                    {initial ?? <Briefcase className="size-4" />}
+                  {/* Avatar — company initial (tint matches accent) */}
+                  <span
+                    className={cn(
+                      "flex size-[46px] shrink-0 items-center justify-center rounded-lg text-base font-semibold",
+                      accent.avatar,
+                    )}
+                  >
+                    {initial ?? <Briefcase className="size-5" />}
                   </span>
 
                   {/* Title + company */}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold leading-tight">
+                  <div className="min-w-0 flex-1 md:w-56 md:flex-none">
+                    <p className="truncate text-[15px] font-medium leading-tight">
                       {job.title}
                     </p>
                     {job.company && (
                       <p className="truncate text-xs text-muted-foreground">
                         {job.company}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Skill chips fill the middle (top 3 + overflow) */}
+                  <div className="hidden min-w-0 flex-1 items-center gap-1.5 overflow-hidden md:flex">
+                    {skills.slice(0, 3).map((s) => (
+                      <span
+                        key={s}
+                        className="shrink-0 rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                    {extra > 0 && (
+                      <span className="shrink-0 text-[11px] font-medium text-muted-foreground/70">
+                        +{extra}
+                      </span>
                     )}
                   </div>
 
@@ -139,11 +179,9 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
                       : "Any"}
                   </span>
 
-                  {/* Three-dot menu — above the stretched link */}
-                  <div className="relative z-10 shrink-0">
-                    <JobCardMenu jobId={job.id} jobTitle={job.title} />
-                  </div>
-                </div>
+                  {/* Chevron */}
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground/50 transition-all duration-150 group-hover:translate-x-0.5 group-hover:text-primary" />
+                </Link>
               </motion.div>
             );
           })}
