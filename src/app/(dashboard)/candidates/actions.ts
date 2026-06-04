@@ -282,7 +282,10 @@ export async function updateCandidateStageAction(
     return { ok: false, error: "Candidate not found" };
   }
 
-  await prisma.candidate.update({ where: { id }, data: { stage } });
+  await prisma.candidate.update({
+    where: { id },
+    data: { stage, ...(stage === "Hired" ? { hiredAt: new Date() } : {}) },
+  });
 
   await logActivity(
     orgId,
@@ -351,7 +354,7 @@ export async function bulkUpdateStageAction(
 
   const result = await prisma.candidate.updateMany({
     where: { id: { in: ids }, orgId },
-    data: { stage },
+    data: { stage, ...(stage === "Hired" ? { hiredAt: new Date() } : {}) },
   });
 
   await logActivity(

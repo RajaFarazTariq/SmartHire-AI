@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { timeAgo } from "@/lib/activity-meta";
 import { updateMemberRoleAction } from "@/app/(dashboard)/organization/member-actions";
 import type { MemberRow } from "./actions";
 import { Input } from "@/components/ui/input";
@@ -59,6 +58,18 @@ function initials(name: string) {
       .map((p) => p[0]?.toUpperCase() ?? "")
       .join("") || "?"
   );
+}
+
+// "Since" = join/hire date. Within the last 24h show relative time
+// ("3 hours ago"); after that show the actual date (06/04/2026).
+function sinceLabel(d: Date): string {
+  const ms = Date.now() - new Date(d).getTime();
+  const mins = Math.floor(ms / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} minute${mins === 1 ? "" : "s"} ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hour${hrs === 1 ? "" : "s"} ago`;
+  return new Date(d).toLocaleDateString();
 }
 
 export function MembersList({
@@ -268,7 +279,7 @@ export function MembersList({
                     {/* Since */}
                     <td className="hidden px-3 py-2.5 align-top sm:table-cell">
                       <span className="text-xs text-muted-foreground">
-                        {m.since ? timeAgo(m.since) : "—"}
+                        {m.since ? sinceLabel(m.since) : "—"}
                       </span>
                     </td>
                   </tr>
