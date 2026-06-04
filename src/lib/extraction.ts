@@ -43,7 +43,7 @@ export async function processCandidate(candidateId: string) {
       fullName: data.fullName ?? candidate.filename,
       currentTitle: data.currentTitle ?? "",
       skills: data.skills,
-      yearsExperience: data.yearsExperience,
+      yearsExperience: data.yearsExperience ?? 0,
     });
     pineconeId = candidate.id;
   } catch (err) {
@@ -62,7 +62,8 @@ export async function processCandidate(candidateId: string) {
       phone: data.phone ?? candidate.phone,
       currentTitle: data.currentTitle,
       extractedSkills: data.skills,
-      yearsExperience: Math.round(data.yearsExperience),
+      yearsExperience:
+        data.yearsExperience != null ? Math.round(data.yearsExperience) : null,
       educationLevel: data.educationLevel,
       pineconeId,
       status: "ready",

@@ -35,13 +35,32 @@ export async function notifyStageChange(candidateId: string, stage: string) {
     });
     if (!app) return;
 
+    // The interviewer's candidate-facing message (one interview per candidate).
+    // Only the dedicated "message to candidate" is surfaced — strengths /
+    // concerns / recommendation stay internal.
+    const feedback = await prisma.interviewFeedback.findFirst({
+      where: { interview: { candidateId }, candidateMessage: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      select: { candidateMessage: true },
+    });
+
+    const at = app.job.company ? ` at ${app.job.company}` : "";
+    const isHired = stage === "Hired";
+    const title = isHired
+      ? "🎉 Congratulations — you've been hired!"
+      : `Application moved to ${stage}`;
+    let body = isHired
+      ? `Great news — you've been hired for "${app.job.title}"${at}. Congratulations!`
+      : `Your application for "${app.job.title}"${at} is now in the ${stage} stage.`;
+    if (feedback?.candidateMessage) {
+      body += ` Your interviewer's message: "${feedback.candidateMessage}"`;
+    }
+
     await createNotification({
       userId: app.applicantId,
       type: "application.status",
-      title: `Application moved to ${stage}`,
-      body: `Your application for "${app.job.title}"${
-        app.job.company ? ` at ${app.job.company}` : ""
-      } is now in the ${stage} stage.`,
+      title,
+      body,
       link: `/portal/applications/${app.id}`,
     });
   } catch (err) {

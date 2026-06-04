@@ -8,6 +8,8 @@ import {
   Copy,
   Check,
   AlarmClock,
+  MessageSquareQuote,
+  Star,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,6 +26,8 @@ export type PortalInterview = {
   durationMins: number;
   meetingLink: string | null;
   location: string | null;
+  /** Interviewer's candidate-facing message + rating (internal notes excluded). */
+  feedback?: { message: string; rating: number } | null;
 };
 
 function fmtFull(d: Date) {
@@ -204,6 +208,26 @@ export function PortalInterviewCard({ interview }: { interview: PortalInterview 
             notified as soon as it&apos;s added.
           </p>
         )
+      )}
+
+      {/* Interviewer feedback shared with the candidate */}
+      {interview.feedback?.message && (
+        <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-primary">
+              <MessageSquareQuote className="size-3.5" /> Feedback from your interviewer
+            </p>
+            {interview.feedback.rating > 0 && (
+              <span className="flex items-center gap-0.5 text-xs font-medium tabular-nums text-amber-600 dark:text-amber-400">
+                <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                {interview.feedback.rating}/5
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 whitespace-pre-wrap text-sm">
+            {interview.feedback.message}
+          </p>
+        </div>
       )}
     </div>
   );

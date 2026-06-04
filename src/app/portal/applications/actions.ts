@@ -56,6 +56,13 @@ export async function getApplicantInterviews(candidateId: string) {
       status: true,
       meetingLink: true,
       location: true,
+      // Only the candidate-facing message + rating are exposed here; internal
+      // scorecard fields (strengths/concerns/recommendation) are never selected.
+      feedback: {
+        where: { candidateMessage: { not: null } },
+        select: { candidateMessage: true, rating: true },
+        take: 1,
+      },
     },
   });
 }

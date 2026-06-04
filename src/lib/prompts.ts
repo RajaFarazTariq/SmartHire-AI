@@ -8,7 +8,7 @@ Return ONLY valid JSON matching this schema (no markdown, no commentary):
   "phone": string | null,
   "currentTitle": string | null,
   "skills": string[],
-  "yearsExperience": number,
+  "yearsExperience": number | null,
   "educationLevel": "Bachelor's" | "Master's" | "PhD" | "High School" | null,
   "workHistory": [
     { "company": string, "title": string, "yearsAtRole": number }
@@ -18,7 +18,7 @@ Return ONLY valid JSON matching this schema (no markdown, no commentary):
 Rules:
 - Normalize skill names: "Postgres" -> "PostgreSQL", "JS" -> "JavaScript", "React.js" -> "React"
 - Include both technical skills (languages, frameworks, tools) and named soft skills (e.g., "Team Leadership")
-- For yearsExperience, sum total professional experience across all jobs, excluding internships
+- For yearsExperience, sum total professional experience across all jobs, excluding internships. If the resume does not state any professional experience or duration, use null (do NOT default to 0).
 - Return [] for any list field with no data; null for missing single values
 
 Resume:
