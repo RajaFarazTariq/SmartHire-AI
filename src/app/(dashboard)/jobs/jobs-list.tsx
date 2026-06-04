@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   Search,
   Briefcase,
-  ArrowRight,
   Plus,
   ChevronLeft,
   ChevronRight,
@@ -14,7 +13,6 @@ import { motion } from "motion/react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { JobCardMenu } from "./job-card-menu";
 import type { JobListItem } from "./actions";
@@ -72,7 +70,7 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
 
   return (
     <div>
-      <div className="relative mb-6 max-w-sm">
+      <div className="relative mb-4 max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           value={query}
@@ -82,85 +80,73 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
         />
       </div>
 
+      <p className="mb-3 text-xs text-muted-foreground">
+        We&apos;ve found{" "}
+        <span className="font-medium text-foreground">{filtered.length}</span>{" "}
+        job{filtered.length === 1 ? "" : "s"}
+      </p>
+
       {filtered.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
           No jobs match “{query}”.
         </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {paged.map((job, i) => (
-            <motion.div
-              key={job.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.3) }}
-            >
-              <Card className="group relative flex h-full flex-col gap-0 overflow-hidden rounded-lg border-border/60 bg-card py-0 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md hover:shadow-primary/15">
-                {/* Subtle engineered top accent line (brand accent) */}
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-40 transition-opacity duration-150 group-hover:opacity-100"
-                />
-                {/* Stretched link makes the whole card clickable (sits under the menu) */}
-                <Link
-                  href={`/jobs/${job.id}`}
-                  aria-label={job.title}
-                  className="absolute inset-0 z-0"
-                />
+        <div className="divide-y divide-border/60 overflow-hidden rounded-lg border border-border/60 bg-card">
+          {paged.map((job, i) => {
+            const initial = job.company?.trim()?.[0]?.toUpperCase();
+            return (
+              <motion.div
+                key={job.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.25) }}
+              >
+                <div className="group relative flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-primary/[0.04]">
+                  {/* Accent indicator on hover (brand colour) */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-y-0 left-0 w-0.5 bg-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                  />
+                  {/* Stretched link keeps the whole row clickable (under the menu).
+                      Siblings stay un-positioned so the link paints on top. */}
+                  <Link
+                    href={`/jobs/${job.id}`}
+                    aria-label={job.title}
+                    className="absolute inset-0 z-0"
+                  />
 
-                {/* NOTE: this wrapper must stay UN-positioned (no `relative`)
-                    so the stretched Link below paints on top and keeps the
-                    whole card clickable. The menu opts above it via z-10. */}
-                <div className="flex flex-1 flex-col gap-3 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-[15px] font-semibold leading-snug tracking-tight">
+                  {/* Icon anchor — company initial, else a job glyph */}
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold text-primary">
+                    {initial ?? <Briefcase className="size-4" />}
+                  </span>
+
+                  {/* Title + company */}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold leading-tight">
                       {job.title}
-                    </h3>
-                    <div className="relative z-10 -mr-1.5 -mt-1.5">
-                      <JobCardMenu jobId={job.id} jobTitle={job.title} />
-                    </div>
-                  </div>
-
-                  {job.company && (
-                    <p className="-mt-2 text-xs text-muted-foreground">
-                      {job.company}
                     </p>
-                  )}
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {job.requiredSkills.slice(0, 4).map((s) => (
-                      <Badge
-                        key={s}
-                        variant="outline"
-                        className="rounded-md border-border/60 bg-muted/30 px-2 py-0 text-[11px] font-medium text-muted-foreground"
-                      >
-                        {s}
-                      </Badge>
-                    ))}
-                    {job.requiredSkills.length > 4 && (
-                      <Badge
-                        variant="outline"
-                        className="rounded-md border-border/60 px-2 py-0 text-[11px] font-medium text-muted-foreground/70"
-                      >
-                        +{job.requiredSkills.length - 4}
-                      </Badge>
+                    {job.company && (
+                      <p className="truncate text-xs text-muted-foreground">
+                        {job.company}
+                      </p>
                     )}
                   </div>
 
-                  <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
-                    <span className="font-medium uppercase tracking-wide">
-                      {job.minExperience != null
-                        ? `${job.minExperience}+ yrs`
-                        : "Any experience"}
-                    </span>
-                    <span className="flex items-center gap-1 font-medium text-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                      View <ArrowRight className="size-3" />
-                    </span>
+                  {/* Experience pill */}
+                  <span className="hidden shrink-0 rounded-md border border-border/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:inline-block">
+                    {job.minExperience != null
+                      ? `${job.minExperience}+ yrs`
+                      : "Any"}
+                  </span>
+
+                  {/* Three-dot menu — above the stretched link */}
+                  <div className="relative z-10 shrink-0">
+                    <JobCardMenu jobId={job.id} jobTitle={job.title} />
                   </div>
                 </div>
-              </Card>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
