@@ -9,6 +9,7 @@ import { timeAgo } from "@/lib/activity-meta";
 import { cn } from "@/lib/utils";
 import { getMyJoinRequests } from "../actions";
 import { CancelRequestButton } from "./cancel-button";
+import { EnterOrgButton } from "./enter-org-button";
 
 export const dynamic = "force-dynamic";
 
@@ -28,17 +29,36 @@ export default async function PendingPage() {
   if (requests.length === 0) redirect("/onboarding");
 
   const pending = requests.find((r) => r.status === "pending");
+  // Show the "enter" CTA for an approved org when nothing is still pending.
+  const approved = !pending
+    ? requests.find((r) => r.status === "approved")
+    : undefined;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-muted/30 p-6">
       <Brand />
 
       <div className="w-full max-w-md space-y-3 rounded-xl border bg-card p-6 text-center shadow-card">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
-          <Hourglass className="size-6" />
+        <span
+          className={cn(
+            "mx-auto flex size-12 items-center justify-center rounded-full",
+            approved
+              ? "bg-emerald-500/15 text-emerald-500"
+              : "bg-amber-500/15 text-amber-500",
+          )}
+        >
+          {approved ? (
+            <CheckCircle2 className="size-6" />
+          ) : (
+            <Hourglass className="size-6" />
+          )}
         </span>
         <h1 className="text-lg font-semibold">
-          {pending ? "Waiting for approval" : "Your join requests"}
+          {pending
+            ? "Waiting for approval"
+            : approved
+              ? "You're approved!"
+              : "Your join requests"}
         </h1>
         {pending ? (
           <p className="text-sm text-muted-foreground">
@@ -46,11 +66,26 @@ export default async function PendingPage() {
             You'll be able to sign in to the recruiter dashboard once they
             approve your request.
           </p>
+        ) : approved ? (
+          <p className="text-sm text-muted-foreground">
+            Your request to join <strong>{approved.orgName}</strong> was
+            approved. Enter your workspace to get started.
+          </p>
         ) : (
           <p className="text-sm text-muted-foreground">
             None of your requests are awaiting a decision. You can join another
             organization or create your own.
           </p>
+        )}
+
+        {approved && (
+          <div className="pt-1">
+            <EnterOrgButton
+              orgId={approved.orgId}
+              orgName={approved.orgName}
+              className="w-full"
+            />
+          </div>
         )}
       </div>
 
