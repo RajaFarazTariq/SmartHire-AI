@@ -3,18 +3,18 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import {
-  Search,
-  Briefcase,
-  CheckCircle2,
-  SlidersHorizontal,
-  ChevronRight,
-} from "lucide-react";
+import { Search, Briefcase, CheckCircle2, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+  FilterBar,
+  applyFilters,
+  type FilterField,
+  type FilterRule,
+} from "@/components/ui/filter-bar";
 import type { BrowseJob } from "@/app/portal/jobs/actions";
 
 // Restrained accent rotation within the existing palette: brand blue, muted
@@ -39,79 +39,50 @@ export function JobsBrowser({
   appliedIds: string[];
 }) {
   const [q, setQ] = useState("");
-  const [skill, setSkill] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterRule[]>([]);
   const applied = useMemo(() => new Set(appliedIds), [appliedIds]);
 
-  const topSkills = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const j of jobs) {
-      for (const s of j.requiredSkills) counts.set(s, (counts.get(s) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([s]) => s);
-  }, [jobs]);
+  const filterFields = useMemo<FilterField<BrowseJob>[]>(() => {
+    const skills = Array.from(
+      new Set(jobs.flatMap((j) => [...j.requiredSkills, ...j.preferredSkills])),
+    ).sort();
+    return [
+      { key: "skill", label: "Skill", control: { kind: "select", options: skills }, accessor: (j) => [...j.requiredSkills, ...j.preferredSkills] },
+      { key: "experience", label: "Experience", control: { kind: "number" }, accessor: (j) => j.minExperience ?? null },
+      { key: "company", label: "Company", control: { kind: "text" }, accessor: (j) => j.company ?? "" },
+      { key: "title", label: "Title", control: { kind: "text" }, accessor: (j) => j.title },
+      { key: "application", label: "Application", control: { kind: "select", options: ["Applied", "Not applied"] }, accessor: (j) => (applied.has(j.id) ? "Applied" : "Not applied") },
+    ];
+  }, [jobs, applied]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    return jobs.filter((j) => {
-      const matchesTerm =
-        !term ||
-        j.title.toLowerCase().includes(term) ||
-        (j.company ?? "").toLowerCase().includes(term) ||
-        j.requiredSkills.some((s) => s.toLowerCase().includes(term));
-      const matchesSkill =
-        !skill ||
-        j.requiredSkills.includes(skill) ||
-        j.preferredSkills.includes(skill);
-      return matchesTerm && matchesSkill;
-    });
-  }, [jobs, q, skill]);
+    const bySearch = !term
+      ? jobs
+      : jobs.filter(
+          (j) =>
+            j.title.toLowerCase().includes(term) ||
+            (j.company ?? "").toLowerCase().includes(term) ||
+            j.requiredSkills.some((s) => s.toLowerCase().includes(term)),
+        );
+    return applyFilters(bySearch, filters, filterFields);
+  }, [jobs, q, filters, filterFields]);
 
   return (
     <div className="space-y-5">
-      {/* Search */}
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by title, company, or skill…"
-          className="h-11 pl-9"
-        />
-      </div>
-
-      {/* Skill filters */}
-      {topSkills.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <SlidersHorizontal className="size-3.5" /> Filter:
-          </span>
-          {topSkills.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSkill(skill === s ? null : s)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-                skill === s
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-input bg-background text-muted-foreground hover:bg-accent hover:text-foreground",
-              )}
-            >
-              {s}
-            </button>
-          ))}
-          {skill && (
-            <button
-              onClick={() => setSkill(null)}
-              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-            >
-              Clear
-            </button>
-          )}
+      {/* Search + filter */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by title, company, or skill…"
+            className="h-11 pl-9"
+          />
         </div>
-      )}
+        <FilterBar fields={filterFields} rules={filters} onChange={setFilters} />
+      </div>
 
       <p className="text-sm text-muted-foreground">
         {filtered.length} {filtered.length === 1 ? "role" : "roles"}

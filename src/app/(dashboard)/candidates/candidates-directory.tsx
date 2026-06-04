@@ -33,6 +33,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  FilterBar,
+  applyFilters,
+  type FilterField,
+  type FilterRule,
+} from "@/components/ui/filter-bar";
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
@@ -71,7 +77,7 @@ export function CandidatesDirectory({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [stageFilter, setStageFilter] = useState<string>("All");
+  const [filters, setFilters] = useState<FilterRule[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -80,23 +86,24 @@ export function CandidatesDirectory({
   useEffect(() => {
     setPage(1);
     setSelected(new Set());
-  }, [query, stageFilter, sortKey]);
+  }, [query, filters, sortKey]);
 
-  const stageCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: candidates.length };
-    for (const s of PIPELINE_STAGES) counts[s] = 0;
-    for (const c of candidates) {
-      for (const s of c.stages) {
-        if (s in counts) counts[s] += 1;
-      }
-    }
-    return counts;
+  const filterFields = useMemo<FilterField<CandidateDirectoryRow>[]>(() => {
+    const skills = Array.from(
+      new Set(candidates.flatMap((c) => c.extractedSkills)),
+    ).sort();
+    return [
+      { key: "skill", label: "Skill", control: { kind: "select", options: skills }, accessor: (c) => c.extractedSkills },
+      { key: "stage", label: "Stage", control: { kind: "select", options: [...PIPELINE_STAGES] }, accessor: (c) => c.stages },
+      { key: "status", label: "Status", control: { kind: "select", options: ["processing", "ready", "error"] }, accessor: (c) => c.applications.map((a) => a.status) },
+      { key: "experience", label: "Experience", control: { kind: "number" }, accessor: (c) => c.yearsExperience ?? null },
+      { key: "applied", label: "Applied date", control: { kind: "date" }, accessor: (c) => c.lastActivity },
+    ];
   }, [candidates]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = candidates.filter((c) => {
-      if (stageFilter !== "All" && !c.stages.includes(stageFilter)) return false;
+    const bySearch = candidates.filter((c) => {
       if (!q) return true;
       const name = displayName(c).toLowerCase();
       return (
@@ -104,12 +111,11 @@ export function CandidatesDirectory({
         (c.currentTitle?.toLowerCase().includes(q) ?? false) ||
         (c.email?.toLowerCase().includes(q) ?? false) ||
         c.extractedSkills.some((s) => s.toLowerCase().includes(q)) ||
-        c.applications.some((a) =>
-          a.jobTitle?.toLowerCase().includes(q) ?? false,
-        )
+        c.applications.some((a) => a.jobTitle?.toLowerCase().includes(q) ?? false)
       );
     });
-    return [...list].sort((a, b) => {
+    const byFilters = applyFilters(bySearch, filters, filterFields);
+    return [...byFilters].sort((a, b) => {
       if (sortKey === "name") return displayName(a).localeCompare(displayName(b));
       if (sortKey === "applications")
         return b.applications.length - a.applications.length;
@@ -121,7 +127,7 @@ export function CandidatesDirectory({
       }
       return b.lastActivity.getTime() - a.lastActivity.getTime();
     });
-  }, [candidates, query, stageFilter, sortKey]);
+  }, [candidates, query, filters, sortKey, filterFields]);
 
   const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -226,6 +232,11 @@ export function CandidatesDirectory({
           <p className="text-xs text-muted-foreground">
             {visible.length} {visible.length === 1 ? "candidate" : "candidates"}
           </p>
+          <FilterBar
+            fields={filterFields}
+            rules={filters}
+            onChange={setFilters}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -245,25 +256,6 @@ export function CandidatesDirectory({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-
-      {/* Stage filter */}
-      <div className="flex flex-wrap gap-1.5">
-        {["All", ...PIPELINE_STAGES].map((s) => (
-          <button
-            key={s}
-            onClick={() => setStageFilter(s)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-              stageFilter === s
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-transparent bg-muted text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {s}
-            <span className="ml-1.5 opacity-70">{stageCounts[s] ?? 0}</span>
-          </button>
-        ))}
       </div>
 
       {/* Bulk action bar */}
