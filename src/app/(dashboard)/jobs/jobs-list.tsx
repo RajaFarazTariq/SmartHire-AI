@@ -15,6 +15,12 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  FilterBar,
+  applyFilters,
+  type FilterField,
+  type FilterRule,
+} from "@/components/ui/filter-bar";
 import type { JobListItem } from "./actions";
 
 const PAGE_SIZE = 12;
@@ -33,24 +39,43 @@ const ACCENTS = [
   },
 ];
 
+const JOB_FILTER_FIELDS = (
+  jobs: JobListItem[],
+): FilterField<JobListItem>[] => {
+  const skills = Array.from(
+    new Set(jobs.flatMap((j) => j.requiredSkills)),
+  ).sort();
+  return [
+    { key: "skill", label: "Skill", control: { kind: "select", options: skills }, accessor: (j) => j.requiredSkills },
+    { key: "experience", label: "Experience", control: { kind: "number" }, accessor: (j) => j.minExperience ?? null },
+    { key: "company", label: "Company", control: { kind: "text" }, accessor: (j) => j.company ?? "" },
+    { key: "title", label: "Title", control: { kind: "text" }, accessor: (j) => j.title },
+  ];
+};
+
 export function JobsList({ jobs }: { jobs: JobListItem[] }) {
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<FilterRule[]>([]);
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     setPage(1);
-  }, [query]);
+  }, [query, filters]);
+
+  const filterFields = useMemo(() => JOB_FILTER_FIELDS(jobs), [jobs]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter(
-      (j) =>
-        j.title.toLowerCase().includes(q) ||
-        (j.company?.toLowerCase().includes(q) ?? false) ||
-        j.requiredSkills.some((s) => s.toLowerCase().includes(q)),
-    );
-  }, [jobs, query]);
+    const bySearch = !q
+      ? jobs
+      : jobs.filter(
+          (j) =>
+            j.title.toLowerCase().includes(q) ||
+            (j.company?.toLowerCase().includes(q) ?? false) ||
+            j.requiredSkills.some((s) => s.toLowerCase().includes(q)),
+        );
+    return applyFilters(bySearch, filters, filterFields);
+  }, [jobs, query, filters, filterFields]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -84,14 +109,17 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
 
   return (
     <div>
-      <div className="relative mb-4 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by title, company, or skill…"
-          className="pl-9"
-        />
+      <div className="mb-4 flex items-center gap-2">
+        <div className="relative max-w-sm flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by title, company, or skill…"
+            className="pl-9"
+          />
+        </div>
+        <FilterBar fields={filterFields} rules={filters} onChange={setFilters} />
       </div>
 
       <p className="mb-3 text-xs text-muted-foreground">
