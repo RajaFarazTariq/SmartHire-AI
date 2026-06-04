@@ -28,11 +28,19 @@ import {
 // differ. Value matching + the modal/query-builder all live here.
 // ---------------------------------------------------------------------------
 
+/** A select option: a plain string (value === label) or a labelled pair. */
+export type FilterSelectOption = string | { value: string; label: string };
+
+const optValue = (o: FilterSelectOption) =>
+  typeof o === "string" ? o : o.value;
+const optLabel = (o: FilterSelectOption) =>
+  typeof o === "string" ? o : o.label;
+
 export type FilterControl =
   | { kind: "text" }
   | { kind: "number" }
   | { kind: "date" }
-  | { kind: "select"; options: string[] };
+  | { kind: "select"; options: FilterSelectOption[] };
 
 export type FilterField<T> = {
   key: string;
@@ -364,8 +372,8 @@ function ValueControl<T>({
         </SelectTrigger>
         <SelectContent>
           {field.control.options.map((o) => (
-            <SelectItem key={o} value={o}>
-              {o}
+            <SelectItem key={optValue(o)} value={optValue(o)}>
+              {optLabel(o)}
             </SelectItem>
           ))}
         </SelectContent>
