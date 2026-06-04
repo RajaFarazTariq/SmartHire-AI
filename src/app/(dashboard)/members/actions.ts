@@ -119,6 +119,7 @@ async function getHiredPeople(orgId: string): Promise<MemberRow[]> {
       fullName: true,
       email: true,
       uploadedAt: true,
+      hiredAt: true,
       application: {
         select: {
           applicantId: true,
@@ -151,7 +152,9 @@ async function getHiredPeople(orgId: string): Promise<MemberRow[]> {
       role: "Hired",
       roleKey: "hired",
       jobTitle: r.application?.job?.title ?? null,
-      since: r.uploadedAt,
+      // Hired people are "since" their HIRE date (fallback to apply date for
+      // rows hired before hiredAt was tracked).
+      since: r.hiredAt ?? r.uploadedAt,
       isOriginalAdmin: false,
     });
   }

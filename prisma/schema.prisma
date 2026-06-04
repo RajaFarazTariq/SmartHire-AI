@@ -71,6 +71,7 @@ model Candidate {
   pineconeId        String?
   status            String   @default("processing") // AI pipeline: processing | ready | error
   stage             String   @default("Applied") // hiring pipeline (see lib/pipeline.ts)
+  hiredAt           DateTime? // set when the candidate is moved to the "Hired" stage
   linkedinUrl       String? // applicant-supplied (self-service apply)
   githubUrl         String?
   portfolioUrl      String?
