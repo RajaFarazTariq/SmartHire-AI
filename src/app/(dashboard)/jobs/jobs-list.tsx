@@ -108,7 +108,10 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
                   className="absolute inset-0 z-0"
                 />
 
-                <div className="relative flex flex-1 flex-col gap-3 p-4">
+                {/* NOTE: this wrapper must stay UN-positioned (no `relative`)
+                    so the stretched Link below paints on top and keeps the
+                    whole card clickable. The menu opts above it via z-10. */}
+                <div className="flex flex-1 flex-col gap-3 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-[15px] font-semibold leading-snug tracking-tight">
                       {job.title}
