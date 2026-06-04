@@ -4,7 +4,28 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace, ensureOrgRecord } from "@/lib/org";
-import { roleLabel, roleRank } from "@/lib/rbac";
+import {
+  roleLabel,
+  roleRank,
+  ROLE_ADMIN,
+  ROLE_MANAGER,
+  ROLE_RECRUITER,
+} from "@/lib/rbac";
+
+// Maps an org member's role to a human "position" for the roster's Position
+// column (Admin → CEO, etc.). Plain members have no implied position.
+function positionForRole(roleKey: string): string | null {
+  switch (roleKey) {
+    case ROLE_ADMIN:
+      return "CEO";
+    case ROLE_MANAGER:
+      return "Manager";
+    case ROLE_RECRUITER:
+      return "Recruiter";
+    default:
+      return null;
+  }
+}
 
 export type MemberRow = {
   /** Clerk userId for staff; candidate row id for hired people. */
@@ -77,7 +98,7 @@ async function getOrgStaff(orgId: string): Promise<MemberRow[]> {
           kind: "staff",
           role: roleLabel(m.role),
           roleKey: m.role,
-          jobTitle: null,
+          jobTitle: positionForRole(m.role),
           since: new Date(m.createdAt),
           isOriginalAdmin: userId === founderId,
         };

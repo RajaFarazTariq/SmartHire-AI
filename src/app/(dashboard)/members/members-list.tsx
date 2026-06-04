@@ -1,15 +1,43 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
-import { Users, Search, X, Mail, Briefcase, Crown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import {
+  Users,
+  Search,
+  X,
+  Mail,
+  Briefcase,
+  Crown,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/activity-meta";
+import { updateMemberRoleAction } from "@/app/(dashboard)/organization/member-actions";
 import type { MemberRow } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+
+// Roles an admin can assign from the members table (Admin is never grantable —
+// it's reserved for the founder). The server action enforces the full hierarchy.
+const ASSIGNABLE_ROLES = [
+  { key: "org:manager", label: "Manager" },
+  { key: "org:recruiter", label: "Recruiter" },
+  { key: "org:member", label: "Member" },
+];
 
 // Role badge colours, keyed by the role label.
 const ROLE_STYLES: Record<string, string> = {
@@ -33,7 +61,15 @@ function initials(name: string) {
   );
 }
 
-export function MembersList({ members }: { members: MemberRow[] }) {
+export function MembersList({
+  members,
+  canManageRoles,
+  currentUserId,
+}: {
+  members: MemberRow[];
+  canManageRoles: boolean;
+  currentUserId: string;
+}) {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("All");
 
@@ -136,7 +172,7 @@ export function MembersList({ members }: { members: MemberRow[] }) {
               <tr>
                 <th className="px-3 py-2.5">Member</th>
                 <th className="px-3 py-2.5">Role</th>
-                <th className="hidden px-3 py-2.5 md:table-cell">Hired for</th>
+                <th className="hidden px-3 py-2.5 md:table-cell">Position</th>
                 <th className="hidden px-3 py-2.5 sm:table-cell">Since</th>
               </tr>
             </thead>
@@ -196,14 +232,26 @@ export function MembersList({ members }: { members: MemberRow[] }) {
 
                     {/* Role */}
                     <td className="px-3 py-2.5 align-top">
-                      <Badge
-                        className={cn(
-                          "border-0",
-                          ROLE_STYLES[m.role] ?? "bg-muted text-muted-foreground",
-                        )}
-                      >
-                        {m.role}
-                      </Badge>
+                      {canManageRoles &&
+                      m.kind === "staff" &&
+                      !m.isOriginalAdmin &&
+                      m.id !== currentUserId ? (
+                        <RoleMenu
+                          userId={m.id}
+                          currentRole={m.role}
+                          currentRoleKey={m.roleKey}
+                        />
+                      ) : (
+                        <Badge
+                          className={cn(
+                            "border-0",
+                            ROLE_STYLES[m.role] ??
+                              "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {m.role}
+                        </Badge>
+                      )}
                     </td>
 
                     {/* Hired for */}
@@ -231,5 +279,78 @@ export function MembersList({ members }: { members: MemberRow[] }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Admin-only inline role switcher. Permission/hierarchy/founder rules are
+// enforced server-side by updateMemberRoleAction; this just surfaces the options.
+function RoleMenu({
+  userId,
+  currentRole,
+  currentRoleKey,
+}: {
+  userId: string;
+  currentRole: string;
+  currentRoleKey: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function change(roleKey: string) {
+    if (roleKey === currentRoleKey) return;
+    startTransition(async () => {
+      const res = await updateMemberRoleAction(userId, roleKey);
+      if (res.ok) {
+        toast.success("Role updated");
+        router.refresh();
+      } else {
+        toast.error(res.error ?? "Couldn't update role");
+      }
+    });
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          disabled={pending}
+          className="inline-flex items-center gap-1 rounded-md transition-opacity hover:opacity-80 disabled:opacity-60"
+          aria-label="Change role"
+        >
+          <Badge
+            className={cn(
+              "border-0",
+              ROLE_STYLES[currentRole] ?? "bg-muted text-muted-foreground",
+            )}
+          >
+            {currentRole}
+          </Badge>
+          {pending ? (
+            <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+          ) : (
+            <ChevronDown className="size-3.5 text-muted-foreground" />
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuLabel>Change role</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {ASSIGNABLE_ROLES.map((r) => (
+          <DropdownMenuItem
+            key={r.key}
+            disabled={r.key === currentRoleKey}
+            onSelect={() => change(r.key)}
+          >
+            {r.label}
+            {r.key === currentRoleKey && (
+              <span className="ml-auto text-xs text-muted-foreground">
+                current
+              </span>
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
