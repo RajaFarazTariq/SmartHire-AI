@@ -188,6 +188,12 @@ export default async function ApplicationDetailPage({
                   durationMins: iv.durationMins,
                   meetingLink: iv.meetingLink,
                   location: iv.location,
+                  feedback: iv.feedback[0]?.candidateMessage
+                    ? {
+                        message: iv.feedback[0].candidateMessage,
+                        rating: iv.feedback[0].rating,
+                      }
+                    : null,
                 }}
               />
             ))}

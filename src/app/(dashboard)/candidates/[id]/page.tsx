@@ -88,10 +88,12 @@ export default async function CandidateDetailPage({
     {
       icon: Clock,
       label: "Experience",
+      // Null/0 means the resume didn't state experience — show "Not mentioned"
+      // rather than a misleading "0 years".
       value:
-        candidate.yearsExperience != null
-          ? `${candidate.yearsExperience} years`
-          : null,
+        candidate.yearsExperience != null && candidate.yearsExperience > 0
+          ? `${candidate.yearsExperience} year${candidate.yearsExperience === 1 ? "" : "s"}`
+          : "Not mentioned",
     },
     { icon: GraduationCap, label: "Education", value: candidate.educationLevel },
   ];

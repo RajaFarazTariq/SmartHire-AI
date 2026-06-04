@@ -225,6 +225,7 @@ model InterviewFeedback {
   strengths      String?  @db.Text
   concerns       String?  @db.Text
   comments       String?  @db.Text
+  candidateMessage String? @db.Text // shared WITH the candidate (the others are internal)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

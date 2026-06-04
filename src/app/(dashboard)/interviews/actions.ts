@@ -460,6 +460,7 @@ export async function submitFeedbackAction(
     strengths: string;
     concerns: string;
     comments: string;
+    candidateMessage: string;
   },
 ): Promise<{ ok: boolean; error?: string }> {
   const { user, orgId, role } = await requireWorkspace();
@@ -485,6 +486,7 @@ export async function submitFeedbackAction(
       strengths: data.strengths.trim() || null,
       concerns: data.concerns.trim() || null,
       comments: data.comments.trim() || null,
+      candidateMessage: data.candidateMessage.trim() || null,
     },
     create: {
       interviewId,
@@ -494,6 +496,7 @@ export async function submitFeedbackAction(
       strengths: data.strengths.trim() || null,
       concerns: data.concerns.trim() || null,
       comments: data.comments.trim() || null,
+      candidateMessage: data.candidateMessage.trim() || null,
     },
   });
 

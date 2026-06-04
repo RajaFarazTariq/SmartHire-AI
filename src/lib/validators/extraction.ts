@@ -8,7 +8,9 @@ export const extractionSchema = z.object({
   phone: z.string().trim().min(1).nullable().catch(null),
   currentTitle: z.string().trim().min(1).nullable().catch(null),
   skills: z.array(z.string().trim()).catch([]),
-  yearsExperience: z.coerce.number().min(0).max(60).catch(0),
+  // null when the resume doesn't state years of experience (shown as
+  // "Not mentioned" rather than a misleading "0 years").
+  yearsExperience: z.coerce.number().min(0).max(60).nullable().catch(null),
   educationLevel: z.string().trim().min(1).nullable().catch(null),
   workHistory: z
     .array(

@@ -699,6 +699,9 @@ function FeedbackForm({
   const [strengths, setStrengths] = useState(existing?.strengths ?? "");
   const [concerns, setConcerns] = useState(existing?.concerns ?? "");
   const [comments, setComments] = useState(existing?.comments ?? "");
+  const [candidateMessage, setCandidateMessage] = useState(
+    existing?.candidateMessage ?? "",
+  );
 
   async function submit() {
     setPending(true);
@@ -708,6 +711,7 @@ function FeedbackForm({
       strengths,
       concerns,
       comments,
+      candidateMessage,
     });
     setPending(false);
     if (res.ok) {
@@ -782,10 +786,26 @@ function FeedbackForm({
       />
       <Textarea
         rows={2}
-        placeholder="Additional comments"
+        placeholder="Additional comments (internal)"
         value={comments}
         onChange={(e) => setComments(e.target.value)}
       />
+      <div className="space-y-1 rounded-md border border-primary/30 bg-primary/5 p-2">
+        <Label className="flex items-center gap-1.5 text-xs text-primary">
+          <Sparkles className="size-3" /> Message to candidate (shared with them)
+        </Label>
+        <Textarea
+          rows={2}
+          placeholder="A note the candidate will see, e.g. 'Great conversation — we'd love to move forward.'"
+          value={candidateMessage}
+          onChange={(e) => setCandidateMessage(e.target.value)}
+          maxLength={1000}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Strengths, concerns, rating and recommendation stay internal — only
+          this message is shown to the candidate.
+        </p>
+      </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={submit} disabled={pending} className="h-8">
           {pending ? <Loader2 className="size-3.5 animate-spin" /> : "Save"}
