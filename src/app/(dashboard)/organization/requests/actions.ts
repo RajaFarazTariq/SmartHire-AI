@@ -5,7 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
 import { requireWorkspace } from "@/lib/org";
-import { isAdmin } from "@/lib/rbac";
+import { isAdmin, ROLE_RECRUITER, ROLE_MEMBER } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity";
 import { createNotification } from "@/lib/notify";
 
@@ -63,13 +63,33 @@ export async function approveRequestAction(
     return { ok: false, error: "This request has already been decided." };
   }
 
+  // Joining via the recruiter portal → default to the Recruiter role.
   try {
     const client = await clerkClient();
-    await client.organizations.createOrganizationMembership({
-      organizationId: orgId,
-      userId: req.requesterId,
-      role: "org:member",
-    });
+    try {
+      await client.organizations.createOrganizationMembership({
+        organizationId: orgId,
+        userId: req.requesterId,
+        role: ROLE_RECRUITER,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
+      if (/already a member/i.test(msg)) {
+        // Already in the org — nothing to add.
+      } else {
+        // The custom Recruiter role may not be configured in Clerk; fall back
+        // to the default member role so approval still succeeds.
+        console.error(
+          "approveRequest: recruiter role failed, falling back to member:",
+          err,
+        );
+        await client.organizations.createOrganizationMembership({
+          organizationId: orgId,
+          userId: req.requesterId,
+          role: ROLE_MEMBER,
+        });
+      }
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Failed to add member";
     if (!/already a member/i.test(msg)) {
