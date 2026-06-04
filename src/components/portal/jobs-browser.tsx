@@ -6,19 +6,30 @@ import { motion } from "motion/react";
 import {
   Search,
   Briefcase,
-  Clock,
   CheckCircle2,
-  Building2,
   SlidersHorizontal,
+  ChevronRight,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { CARD_HOVER, CARD_HOVER_BASE } from "@/lib/card-accents";
-import { timeAgo } from "@/lib/activity-meta";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import type { BrowseJob } from "@/app/portal/jobs/actions";
+
+// Restrained accent rotation within the existing palette: brand blue, muted
+// purple, muted teal. Bar = solid left edge; avatar = matching tint.
+const ACCENTS = [
+  { bar: "bg-primary", avatar: "bg-primary/10 text-primary" },
+  {
+    bar: "bg-violet-500",
+    avatar: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
+  {
+    bar: "bg-teal-500",
+    avatar: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+  },
+];
 
 export function JobsBrowser({
   jobs,
@@ -117,65 +128,83 @@ export function JobsBrowser({
           </p>
         </Card>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-3">
           {filtered.map((job, i) => {
             const hasApplied = applied.has(job.id);
+            const initial = job.company?.trim()?.[0]?.toUpperCase();
+            const accent = ACCENTS[i % ACCENTS.length];
+            const skills = job.requiredSkills;
+            const extra = skills.length - 3;
             return (
               <motion.div
                 key={job.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.3) }}
               >
-                <Link href={`/portal/jobs/${job.id}`} className="block h-full">
-                  <Card
+                <Link
+                  href={`/portal/jobs/${job.id}`}
+                  className="group relative flex items-center gap-3.5 overflow-hidden rounded-lg border border-border/60 bg-card/60 py-3 pl-6 pr-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10"
+                >
+                  {/* 4px solid accent bar — always visible */}
+                  <span
+                    aria-hidden
+                    className={cn("absolute inset-y-0 left-0 w-1", accent.bar)}
+                  />
+
+                  {/* Avatar — company initial (tint matches accent) */}
+                  <span
                     className={cn(
-                      "group h-full gap-0 p-5",
-                      CARD_HOVER_BASE,
-                      CARD_HOVER.primary,
+                      "flex size-[46px] shrink-0 items-center justify-center rounded-lg text-base font-semibold",
+                      accent.avatar,
                     )}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate font-semibold transition-colors group-hover:text-primary">
-                          {job.title}
-                        </h3>
-                        <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Building2 className="size-3.5 shrink-0" />
-                          {job.company ?? "Confidential"}
-                        </p>
-                      </div>
-                      {hasApplied && (
-                        <Badge className="shrink-0 gap-1 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400">
-                          <CheckCircle2 className="size-3" /> Applied
-                        </Badge>
-                      )}
-                    </div>
+                    {initial ?? <Briefcase className="size-5" />}
+                  </span>
 
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {job.requiredSkills.slice(0, 4).map((s) => (
-                        <Badge key={s} variant="secondary" className="font-normal">
-                          {s}
-                        </Badge>
-                      ))}
-                      {job.requiredSkills.length > 4 && (
-                        <Badge variant="secondary" className="font-normal">
-                          +{job.requiredSkills.length - 4}
-                        </Badge>
-                      )}
-                    </div>
+                  {/* Title + company */}
+                  <div className="min-w-0 flex-1 md:w-56 md:flex-none">
+                    <p className="truncate text-[15px] font-medium leading-tight">
+                      {job.title}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {job.company ?? "Confidential"}
+                    </p>
+                  </div>
 
-                    <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3.5" /> {timeAgo(job.createdAt)}
+                  {/* Skill chips fill the middle (top 3 + overflow) */}
+                  <div className="hidden min-w-0 flex-1 items-center gap-1.5 overflow-hidden md:flex">
+                    {skills.slice(0, 3).map((s) => (
+                      <span
+                        key={s}
+                        className="shrink-0 rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                      >
+                        {s}
                       </span>
-                      {job.minExperience != null && (
-                        <span className="flex items-center gap-1">
-                          <Briefcase className="size-3.5" /> {job.minExperience}+ yrs
-                        </span>
-                      )}
-                    </div>
-                  </Card>
+                    ))}
+                    {extra > 0 && (
+                      <span className="shrink-0 text-[11px] font-medium text-muted-foreground/70">
+                        +{extra}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Applied status (kept — candidate-specific) */}
+                  {hasApplied && (
+                    <Badge className="shrink-0 gap-1 border-0 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400">
+                      <CheckCircle2 className="size-3" /> Applied
+                    </Badge>
+                  )}
+
+                  {/* Experience pill */}
+                  <span className="hidden shrink-0 rounded-md border border-border/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:inline-block">
+                    {job.minExperience != null
+                      ? `${job.minExperience}+ yrs`
+                      : "Any"}
+                  </span>
+
+                  {/* Chevron */}
+                  <ChevronRight className="size-5 shrink-0 text-muted-foreground/50 transition-all duration-150 group-hover:translate-x-0.5 group-hover:text-primary" />
                 </Link>
               </motion.div>
             );
