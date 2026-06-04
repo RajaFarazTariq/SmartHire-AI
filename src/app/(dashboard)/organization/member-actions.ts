@@ -46,9 +46,9 @@ export type PendingInvitation = {
 };
 
 export async function getOrgMembersDetailed(): Promise<OrgMemberRow[]> {
-  const { orgId, role } = await requireWorkspace();
-  // Rule 7: members/recruiters cannot enumerate full membership.
-  if (!isAdmin(role)) return [];
+  // Any org member may VIEW the roster (read-only directory). Mutating actions
+  // below (role change, remove, invite) still enforce admin/manager + hierarchy.
+  const { orgId } = await requireWorkspace();
   try {
     const client = await clerkClient();
     const res = await client.organizations.getOrganizationMembershipList({

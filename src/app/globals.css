@@ -266,3 +266,14 @@
   transform-origin: center;
   animation: assistant-blink 4.5s infinite ease-in-out;
 }
+
+/* Hide Clerk's built-in "Delete organization" danger zone inside
+   <OrganizationProfile>. We provide our own delete flow with a confirmation
+   dialog (DeleteOrgDialog), so only one delete action should ever be visible.
+   Targets the known danger-section class plus a localization-key fallback so it
+   holds across Clerk versions. */
+.cl-profileSection__organizationDanger,
+.cl-organizationProfile
+  .cl-profileSection:has([data-localization-key*="deleteOrganization"]) {
+  display: none !important;
+}
