@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { ACTIVITY_TYPES, activityIcon, timeAgo } from "@/lib/activity-meta";
+import { activityIcon, timeAgo } from "@/lib/activity-meta";
 import { getOrgActivity } from "./actions";
+import { ActivityFilters } from "./activity-filters";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import type { FilterRule } from "@/components/ui/filter-bar";
 
-function buildQuery(params: { type?: string; page?: number }) {
+function buildQuery(params: { f?: string; page?: number }) {
   const sp = new URLSearchParams();
-  if (params.type && params.type !== "all") sp.set("type", params.type);
+  if (params.f) sp.set("f", params.f);
   if (params.page && params.page > 1) sp.set("page", String(params.page));
   const q = sp.toString();
   return q ? `/activity?${q}` : "/activity";
@@ -19,14 +20,31 @@ function buildQuery(params: { type?: string; page?: number }) {
 export default async function ActivityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; page?: string }>;
+  searchParams: Promise<{ f?: string; page?: string }>;
 }) {
   const sp = await searchParams;
-  const type = sp.type ?? "all";
   const page = Number(sp.page ?? "1") || 1;
 
-  const { items, total, pageSize } = await getOrgActivity({ type, page });
+  let rules: FilterRule[] = [];
+  try {
+    if (sp.f) {
+      const parsed = JSON.parse(sp.f);
+      if (Array.isArray(parsed)) {
+        rules = parsed.map((r, i) => ({
+          id: typeof r?.id === "string" ? r.id : `flt-${i}`,
+          field: String(r?.field ?? ""),
+          operator: String(r?.operator ?? ""),
+          value: String(r?.value ?? ""),
+        }));
+      }
+    }
+  } catch {
+    /* malformed filter param — ignore */
+  }
+
+  const { items, total, pageSize } = await getOrgActivity({ rules, page });
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasFilters = rules.length > 0;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -35,29 +53,19 @@ export default async function ActivityPage({
         description="An audit trail of actions taken across your organization."
       />
 
-      {/* Type filter */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {[{ value: "all", label: "All" }, ...ACTIVITY_TYPES].map((t) => (
-          <Link
-            key={t.value}
-            href={buildQuery({ type: t.value })}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
-              type === t.value
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-transparent bg-muted text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.label}
-          </Link>
-        ))}
+      {/* Filter */}
+      <div className="mb-6 flex items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {total} event{total === 1 ? "" : "s"}
+        </p>
+        <ActivityFilters rules={rules} />
       </div>
 
       <Card>
         <CardContent className="py-2">
           {items.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted-foreground">
-              No activity recorded{type !== "all" ? " for this filter" : ""} yet.
+              No activity recorded{hasFilters ? " for these filters" : ""} yet.
             </p>
           ) : (
             <ul className="divide-y">
@@ -89,7 +97,7 @@ export default async function ActivityPage({
       {totalPages > 1 && (
         <div className="mt-6 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            {total} event{total === 1 ? "" : "s"} · page {page} of {totalPages}
+            page {page} of {totalPages}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -99,7 +107,7 @@ export default async function ActivityPage({
               disabled={page <= 1}
               className={page <= 1 ? "pointer-events-none opacity-50" : ""}
             >
-              <Link href={buildQuery({ type, page: page - 1 })}>
+              <Link href={buildQuery({ f: sp.f, page: page - 1 })}>
                 <ChevronLeft className="size-4" /> Prev
               </Link>
             </Button>
@@ -110,7 +118,7 @@ export default async function ActivityPage({
               disabled={page >= totalPages}
               className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
             >
-              <Link href={buildQuery({ type, page: page + 1 })}>
+              <Link href={buildQuery({ f: sp.f, page: page + 1 })}>
                 Next <ChevronRight className="size-4" />
               </Link>
             </Button>

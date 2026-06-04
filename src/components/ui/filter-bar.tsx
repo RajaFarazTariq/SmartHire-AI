@@ -28,11 +28,19 @@ import {
 // differ. Value matching + the modal/query-builder all live here.
 // ---------------------------------------------------------------------------
 
+/** A select option: a plain string (value === label) or a labelled pair. */
+export type FilterSelectOption = string | { value: string; label: string };
+
+const optValue = (o: FilterSelectOption) =>
+  typeof o === "string" ? o : o.value;
+const optLabel = (o: FilterSelectOption) =>
+  typeof o === "string" ? o : o.label;
+
 export type FilterControl =
   | { kind: "text" }
   | { kind: "number" }
   | { kind: "date" }
-  | { kind: "select"; options: string[] };
+  | { kind: "select"; options: FilterSelectOption[] };
 
 export type FilterField<T> = {
   key: string;
@@ -330,8 +338,14 @@ export function FilterBar<T>({
             {hasDraftValue && (
               <Button
                 variant="ghost"
-                onClick={() => setDraft([blankRule(fields)])}
-                className="mr-auto text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  // Reset instantly: clear the applied filters on the list…
+                  onChange([]);
+                  // …and the modal's draft rows, so closing without Apply
+                  // still leaves everything cleared.
+                  setDraft([blankRule(fields)]);
+                }}
+                className="mr-auto text-rose-500 hover:bg-rose-500/10 hover:text-rose-500 dark:text-rose-400 dark:hover:text-rose-400"
               >
                 Clear all
               </Button>
@@ -364,8 +378,8 @@ function ValueControl<T>({
         </SelectTrigger>
         <SelectContent>
           {field.control.options.map((o) => (
-            <SelectItem key={o} value={o}>
-              {o}
+            <SelectItem key={optValue(o)} value={optValue(o)}>
+              {optLabel(o)}
             </SelectItem>
           ))}
         </SelectContent>
