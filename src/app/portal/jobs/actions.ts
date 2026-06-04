@@ -11,6 +11,7 @@ import {
   type ResumeFileType,
 } from "@/lib/parsers";
 import { processCandidate } from "@/lib/extraction";
+import { scoreCandidateForJob } from "@/lib/scoring";
 import { logActivity } from "@/lib/activity";
 import { createNotification } from "@/lib/notify";
 import { markAsCandidate, CANDIDATE_ACCOUNT_TYPE } from "@/lib/candidate";
@@ -232,6 +233,16 @@ export async function applyToJobAction(
     await processCandidate(candidate.id);
   } catch (err) {
     console.error(`Extraction failed for application ${candidate.id}:`, err);
+  }
+
+  // Auto-score this applicant against the job they applied to, so they appear
+  // in the recruiter's rankings / Top AI matches without a manual scoring run.
+  // Best-effort — runs after extraction (needs skills + vector) and never
+  // blocks the application.
+  try {
+    await scoreCandidateForJob(candidate.id, jobId);
+  } catch (err) {
+    console.error(`Auto-score failed for application ${candidate.id}:`, err);
   }
 
   revalidatePath("/portal");
