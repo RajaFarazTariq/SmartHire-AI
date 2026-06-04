@@ -338,8 +338,14 @@ export function FilterBar<T>({
             {hasDraftValue && (
               <Button
                 variant="ghost"
-                onClick={() => setDraft([blankRule(fields)])}
-                className="mr-auto text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  // Reset instantly: clear the applied filters on the list…
+                  onChange([]);
+                  // …and the modal's draft rows, so closing without Apply
+                  // still leaves everything cleared.
+                  setDraft([blankRule(fields)]);
+                }}
+                className="mr-auto text-rose-500 hover:bg-rose-500/10 hover:text-rose-500 dark:text-rose-400 dark:hover:text-rose-400"
               >
                 Clear all
               </Button>
