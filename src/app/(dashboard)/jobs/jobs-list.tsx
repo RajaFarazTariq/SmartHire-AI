@@ -15,7 +15,7 @@ import { motion } from "motion/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { JobCardMenu } from "./job-card-menu";
 import type { JobListItem } from "./actions";
 
@@ -95,46 +95,66 @@ export function JobsList({ jobs }: { jobs: JobListItem[] }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: Math.min(i * 0.04, 0.3) }}
             >
-              <Card className="group relative h-full gap-4 py-5 transition-all hover:border-primary/30 hover:shadow-md">
+              <Card className="group relative flex h-full flex-col gap-0 overflow-hidden rounded-lg border-border/60 bg-card py-0 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md hover:shadow-primary/15">
+                {/* Subtle engineered top accent line (brand accent) */}
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-40 transition-opacity duration-150 group-hover:opacity-100"
+                />
                 {/* Stretched link makes the whole card clickable (sits under the menu) */}
                 <Link
                   href={`/jobs/${job.id}`}
                   aria-label={job.title}
-                  className="absolute inset-0 z-0 rounded-xl"
+                  className="absolute inset-0 z-0"
                 />
-                <CardContent className="space-y-3">
+
+                <div className="relative flex flex-1 flex-col gap-3 p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold leading-tight">{job.title}</h3>
-                    <div className="relative z-10">
+                    <h3 className="text-[15px] font-semibold leading-snug tracking-tight">
+                      {job.title}
+                    </h3>
+                    <div className="relative z-10 -mr-1.5 -mt-1.5">
                       <JobCardMenu jobId={job.id} jobTitle={job.title} />
                     </div>
                   </div>
+
                   {job.company && (
-                    <p className="text-sm text-muted-foreground">{job.company}</p>
+                    <p className="-mt-2 text-xs text-muted-foreground">
+                      {job.company}
+                    </p>
                   )}
+
                   <div className="flex flex-wrap gap-1.5">
                     {job.requiredSkills.slice(0, 4).map((s) => (
-                      <Badge key={s} variant="secondary" className="font-normal">
+                      <Badge
+                        key={s}
+                        variant="outline"
+                        className="rounded-md border-border/60 bg-muted/30 px-2 py-0 text-[11px] font-medium text-muted-foreground"
+                      >
                         {s}
                       </Badge>
                     ))}
                     {job.requiredSkills.length > 4 && (
-                      <Badge variant="outline" className="font-normal">
+                      <Badge
+                        variant="outline"
+                        className="rounded-md border-border/60 px-2 py-0 text-[11px] font-medium text-muted-foreground/70"
+                      >
                         +{job.requiredSkills.length - 4}
                       </Badge>
                     )}
                   </div>
-                </CardContent>
-                <CardFooter className="justify-between text-xs text-muted-foreground">
-                  <span>
-                    {job.minExperience != null
-                      ? `${job.minExperience}+ yrs`
-                      : "Any experience"}
-                  </span>
-                  <span className="flex items-center gap-1 font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                    View <ArrowRight className="size-3.5" />
-                  </span>
-                </CardFooter>
+
+                  <div className="mt-auto flex items-center justify-between border-t border-border/40 pt-3 text-[11px] text-muted-foreground">
+                    <span className="font-medium uppercase tracking-wide">
+                      {job.minExperience != null
+                        ? `${job.minExperience}+ yrs`
+                        : "Any experience"}
+                    </span>
+                    <span className="flex items-center gap-1 font-medium text-primary opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      View <ArrowRight className="size-3" />
+                    </span>
+                  </div>
+                </div>
               </Card>
             </motion.div>
           ))}
