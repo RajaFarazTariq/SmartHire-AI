@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import {
   Search,
   Users,
@@ -57,6 +58,27 @@ const SORTS: { key: SortKey; label: string }[] = [
 ];
 
 const PAGE_SIZE = 15;
+
+// Restrained accent rotation within the existing palette: brand blue, violet,
+// emerald — matches the Jobs row-cards. Bar = solid left edge; avatar + skill
+// chips share the tint.
+const ACCENTS = [
+  {
+    bar: "bg-primary",
+    avatar: "bg-primary/10 text-primary",
+    chip: "border-primary/30 bg-primary/10 text-primary",
+  },
+  {
+    bar: "bg-violet-500",
+    avatar: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    chip: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
+  {
+    bar: "bg-emerald-500",
+    avatar: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  },
+];
 
 function displayName(c: CandidateDirectoryRow) {
   return c.fullName ?? c.email ?? "Unnamed candidate";
@@ -299,91 +321,76 @@ export function CandidatesDirectory({
         </div>
       )}
 
-      {/* Directory table */}
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="w-9 px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    checked={allOnPageSelected}
-                    onChange={togglePage}
-                    aria-label="Select all on this page"
-                    className="cursor-pointer"
-                  />
-                </th>
-                <th className="px-3 py-2.5">Candidate</th>
-                <th className="hidden px-3 py-2.5 lg:table-cell">Skills</th>
-                <th className="px-3 py-2.5">Applications</th>
-                <th className="px-3 py-2.5">Stage</th>
-                <th className="hidden px-3 py-2.5 md:table-cell">
-                  Last activity
-                </th>
-                <th className="w-9 px-3 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {paged.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-3 py-12 text-center text-sm text-muted-foreground"
-                  >
-                    No candidates match your filters.
-                  </td>
-                </tr>
-              ) : (
-                paged.map((c) => (
-                  <CandidateRow
-                    key={c.dedupKey}
-                    candidate={c}
-                    selected={selected.has(c.dedupKey)}
-                    onToggle={() => toggleOne(c.dedupKey)}
-                  />
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Select-all (this page) */}
+      {paged.length > 0 && (
+        <label className="flex w-fit cursor-pointer items-center gap-2 px-1 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={allOnPageSelected}
+            onChange={togglePage}
+            aria-label="Select all on this page"
+            className="size-3.5 cursor-pointer"
+          />
+          Select all on this page
+        </label>
+      )}
 
-        {/* Pagination */}
-        {visible.length > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t px-3 py-2.5 text-xs text-muted-foreground">
-            <span>
-              Showing {(currentPage - 1) * PAGE_SIZE + 1}–
-              {Math.min(currentPage * PAGE_SIZE, visible.length)} of{" "}
-              {visible.length}
+      {/* Directory — elevated row-cards */}
+      {paged.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          No candidates match your filters.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {paged.map((c, i) => (
+            <motion.div
+              key={c.dedupKey}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, delay: Math.min(i * 0.03, 0.25) }}
+            >
+              <CandidateRow
+                candidate={c}
+                selected={selected.has(c.dedupKey)}
+                onToggle={() => toggleOne(c.dedupKey)}
+                accent={ACCENTS[i % ACCENTS.length]}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {visible.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+          <span>
+            Showing {(currentPage - 1) * PAGE_SIZE + 1}–
+            {Math.min(currentPage * PAGE_SIZE, visible.length)} of{" "}
+            {visible.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="size-4" /> Prev
+            </Button>
+            <span className="px-2 tabular-nums">
+              {currentPage} / {totalPages}
             </span>
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="size-4" /> Prev
-              </Button>
-              <span className="px-2 tabular-nums">
-                {currentPage} / {totalPages}
-              </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7"
-                onClick={() =>
-                  setPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage >= totalPages}
-              >
-                Next <ChevronRight className="size-4" />
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages}
+            >
+              Next <ChevronRight className="size-4" />
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -392,10 +399,12 @@ function CandidateRow({
   candidate: c,
   selected,
   onToggle,
+  accent,
 }: {
   candidate: CandidateDirectoryRow;
   selected: boolean;
   onToggle: () => void;
+  accent: (typeof ACCENTS)[number];
 }) {
   const name = displayName(c);
   const profileHref = `/candidates/${c.primaryId}`;
@@ -403,67 +412,90 @@ function CandidateRow({
   const extraSkills = Math.max(0, c.extractedSkills.length - SKILLS_SHOWN);
 
   return (
-    <tr className="transition-colors hover:bg-accent/30">
-      <td className="px-3 py-2.5 align-top">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggle}
-          aria-label={`Select ${name}`}
-          className="mt-0.5 cursor-pointer"
-        />
-      </td>
+    <div
+      className={cn(
+        "group relative flex items-center gap-3 overflow-hidden rounded-lg border bg-card/60 py-3 pl-6 pr-3 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md hover:shadow-primary/10",
+        selected ? "border-primary/50 bg-primary/[0.04]" : "border-border/60",
+      )}
+    >
+      {/* 4px solid accent bar — always visible */}
+      <span
+        aria-hidden
+        className={cn("absolute inset-y-0 left-0 w-1", accent.bar)}
+      />
 
-      {/* Candidate identity */}
-      <td className="px-3 py-2.5 align-top">
-        <Link href={profileHref} className="flex items-start gap-3 group">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-            {initials(name)}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium text-foreground group-hover:text-primary">
-              {name}
-            </span>
-            {c.currentTitle && (
-              <span className="block truncate text-xs text-muted-foreground">
-                {c.currentTitle}
-                {c.yearsExperience != null && c.yearsExperience > 0 && (
-                  <> · {c.yearsExperience} yr{c.yearsExperience === 1 ? "" : "s"}</>
-                )}
-              </span>
-            )}
-            {c.email && (
-              <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                <Mail className="size-3" />
-                <span className="truncate">{c.email}</span>
-              </span>
-            )}
-          </span>
-        </Link>
-      </td>
+      {/* Whole card navigates to the profile. This sits UNDER the content
+          (z-0); interactive controls below lift themselves to z-10 so they
+          stay clickable. Non-interactive content stays unpositioned so clicks
+          fall through to this link. */}
+      <Link
+        href={profileHref}
+        aria-label={`View ${name}`}
+        className="absolute inset-0 z-0"
+      />
 
-      {/* Skills */}
-      <td className="hidden px-3 py-2.5 align-top lg:table-cell">
-        {c.extractedSkills.length === 0 ? (
-          <span className="text-xs text-muted-foreground">—</span>
-        ) : (
-          <div className="flex flex-wrap gap-1">
-            {c.extractedSkills.slice(0, SKILLS_SHOWN).map((s) => (
-              <Badge key={s} variant="secondary" className="font-normal">
-                {s}
-              </Badge>
-            ))}
-            {extraSkills > 0 && (
-              <Badge variant="outline" className="font-normal">
-                +{extraSkills}
-              </Badge>
-            )}
-          </div>
+      {/* Select checkbox */}
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={onToggle}
+        aria-label={`Select ${name}`}
+        className="relative z-10 size-4 shrink-0 cursor-pointer"
+      />
+
+      {/* Avatar — initials (tint matches accent) */}
+      <span
+        className={cn(
+          "flex size-[46px] shrink-0 items-center justify-center rounded-lg text-sm font-semibold",
+          accent.avatar,
         )}
-      </td>
+      >
+        {initials(name)}
+      </span>
 
-      {/* Applications */}
-      <td className="px-3 py-2.5 align-top">
+      {/* Identity */}
+      <div className="min-w-0 flex-1 md:w-60 md:flex-none">
+        <p className="truncate text-[15px] font-medium leading-tight transition-colors group-hover:text-primary">
+          {name}
+        </p>
+        {c.currentTitle && (
+          <p className="truncate text-xs text-muted-foreground">
+            {c.currentTitle}
+            {c.yearsExperience != null && c.yearsExperience > 0 && (
+              <> · {c.yearsExperience} yr{c.yearsExperience === 1 ? "" : "s"}</>
+            )}
+          </p>
+        )}
+        {c.email && (
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Mail className="size-3 shrink-0" />
+            <span className="truncate">{c.email}</span>
+          </p>
+        )}
+      </div>
+
+      {/* Skill chips fill the middle (top 3 + overflow) */}
+      <div className="hidden min-w-0 flex-1 items-center gap-1.5 overflow-hidden lg:flex">
+        {c.extractedSkills.slice(0, SKILLS_SHOWN).map((s) => (
+          <span
+            key={s}
+            className={cn(
+              "shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-medium",
+              accent.chip,
+            )}
+          >
+            {s}
+          </span>
+        ))}
+        {extraSkills > 0 && (
+          <span className="shrink-0 text-[11px] font-medium text-muted-foreground/70">
+            +{extraSkills}
+          </span>
+        )}
+      </div>
+
+      {/* Applications dropdown */}
+      <div className="relative z-10 hidden shrink-0 sm:block">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -477,7 +509,7 @@ function CandidateRow({
               </span>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-72">
+          <DropdownMenuContent align="end" className="w-72">
             <DropdownMenuLabel className="text-xs">
               Applications
             </DropdownMenuLabel>
@@ -511,37 +543,33 @@ function CandidateRow({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      </td>
+      </div>
 
       {/* Stage */}
-      <td className="px-3 py-2.5 align-top">
-        <div className="flex flex-wrap gap-1">
-          <Badge
-            className={cn(
-              "border-0",
-              (STAGE_STYLES as Record<string, string>)[c.primaryStage] ??
-                "bg-muted text-muted-foreground",
-            )}
-          >
-            {c.primaryStage}
-          </Badge>
-          {c.stages.length > 1 && (
-            <Badge variant="outline" className="text-[11px] font-normal">
-              +{c.stages.length - 1}
-            </Badge>
+      <div className="flex shrink-0 items-center gap-1">
+        <Badge
+          className={cn(
+            "border-0",
+            (STAGE_STYLES as Record<string, string>)[c.primaryStage] ??
+              "bg-muted text-muted-foreground",
           )}
-        </div>
-      </td>
+        >
+          {c.primaryStage}
+        </Badge>
+        {c.stages.length > 1 && (
+          <Badge variant="outline" className="text-[11px] font-normal">
+            +{c.stages.length - 1}
+          </Badge>
+        )}
+      </div>
 
       {/* Last activity */}
-      <td className="hidden px-3 py-2.5 align-top md:table-cell">
-        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="size-3.5" /> {timeAgo(c.lastActivity)}
-        </span>
-      </td>
+      <span className="hidden shrink-0 items-center gap-1 text-xs text-muted-foreground md:inline-flex">
+        <Clock className="size-3.5" /> {timeAgo(c.lastActivity)}
+      </span>
 
       {/* Actions */}
-      <td className="px-3 py-2.5 align-top">
+      <div className="relative z-10 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -570,7 +598,7 @@ function CandidateRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
