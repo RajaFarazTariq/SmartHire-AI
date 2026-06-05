@@ -453,8 +453,9 @@ function CandidateRow({
         {initials(name)}
       </span>
 
-      {/* Identity */}
-      <div className="min-w-0 flex-1 md:w-60 md:flex-none">
+      {/* Identity — flexible: absorbs slack so the fixed columns to the right
+          always land at the same x on every row. */}
+      <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] font-medium leading-tight transition-colors group-hover:text-primary">
           {name}
         </p>
@@ -494,8 +495,8 @@ function CandidateRow({
         )}
       </div>
 
-      {/* Applications dropdown */}
-      <div className="relative z-10 hidden shrink-0 sm:block">
+      {/* Applications dropdown — fixed-width column, left-aligned */}
+      <div className="relative z-10 hidden w-[4.5rem] shrink-0 sm:block">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -545,8 +546,8 @@ function CandidateRow({
         </DropdownMenu>
       </div>
 
-      {/* Stage */}
-      <div className="flex shrink-0 items-center gap-1">
+      {/* Stage — fixed-width column so every badge starts at the same x */}
+      <div className="flex w-44 shrink-0 items-center gap-1">
         <Badge
           className={cn(
             "border-0",
@@ -563,9 +564,10 @@ function CandidateRow({
         )}
       </div>
 
-      {/* Last activity */}
-      <span className="hidden shrink-0 items-center gap-1 text-xs text-muted-foreground md:inline-flex">
-        <Clock className="size-3.5" /> {timeAgo(c.lastActivity)}
+      {/* Last activity — fixed-width column */}
+      <span className="hidden w-[5.5rem] shrink-0 items-center gap-1 text-xs text-muted-foreground md:flex">
+        <Clock className="size-3.5 shrink-0" />
+        <span className="truncate">{timeAgo(c.lastActivity)}</span>
       </span>
 
       {/* Actions */}
