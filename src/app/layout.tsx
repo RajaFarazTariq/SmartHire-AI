@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 import { SessionSentinel } from "@/components/session-sentinel";
+import { AutoRecover } from "@/components/auto-recover";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className={`${inter.variable} min-h-full font-sans antialiased`}>
+        <AutoRecover />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ClerkThemeProvider>
             <SessionSentinel />
