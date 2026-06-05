@@ -17,17 +17,23 @@ import {
 } from "@/components/ui/filter-bar";
 import type { BrowseJob } from "@/app/portal/jobs/actions";
 
-// Restrained accent rotation within the existing palette: brand blue, muted
-// purple, muted teal. Bar = solid left edge; avatar = matching tint.
+// Restrained accent rotation within the existing palette: brand blue, violet,
+// emerald. Bar = solid left edge; avatar + skill chips share the tint.
 const ACCENTS = [
-  { bar: "bg-primary", avatar: "bg-primary/10 text-primary" },
+  {
+    bar: "bg-primary",
+    avatar: "bg-primary/10 text-primary",
+    chip: "border-primary/30 bg-primary/10 text-primary",
+  },
   {
     bar: "bg-violet-500",
     avatar: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    chip: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
   },
   {
-    bar: "bg-teal-500",
-    avatar: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+    bar: "bg-emerald-500",
+    avatar: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    chip: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
 ];
 
@@ -148,7 +154,10 @@ export function JobsBrowser({
                     {skills.slice(0, 3).map((s) => (
                       <span
                         key={s}
-                        className="shrink-0 rounded-md border border-border/60 bg-muted/30 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+                        className={cn(
+                          "shrink-0 rounded-md border px-2 py-0.5 text-[11px] font-medium",
+                          accent.chip,
+                        )}
                       >
                         {s}
                       </span>
